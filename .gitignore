@@ -73,3 +73,26 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# 환경 변수 파일
+.env
+
+# 에디터 설정
+.vscode/
+.idea/
+
+# React Native Metro 캐시
+.metro-cache/
+
+# Watchman 설정
+.watchmanconfig
+
+# 로그 및 백업
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Android local test build
+android/app/debug.keystore
