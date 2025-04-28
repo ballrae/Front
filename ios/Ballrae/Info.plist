@@ -26,7 +26,6 @@
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-	  <!-- Do not change NSAllowsArbitraryLoads to true, or you will risk app rejection! -->
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 		<key>NSAllowsLocalNetworking</key>
@@ -48,5 +47,21 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+
+	<key>KAKAO_APP_KEY</key>
+	<string>b2d3179e581ae2728fcf294f94774be3</string>
+
+	<key>KAKAO_APP_SCHEME</key>
+	<string>kakaob2d3179e581ae2728fcf294f94774be3</string>
+	
+	<key>CFBundleURLTypes</key>
+	<array>
+	<dict>
+		<key>CFBundleURLSchemes</key>
+		<array>
+		<string>kakaob2d3179e581ae2728fcf294f94774be3</string>
+		</array>
+	</dict>
+	</array>
 </dict>
 </plist>
