@@ -21,7 +21,16 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
-      </activity>
+
+        <!-- 여기 추가 -->
+        <intent-filter>
+           <action android:name="android.intent.action.VIEW" />
+           <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="kakaob2d3179e581ae2728fcf294f94774be3" android:host="oauth" />
+        </intent-filter>
+
+       </activity>
         <receiver
             android:name=".WidgetProvider"
             android:exported="true"
