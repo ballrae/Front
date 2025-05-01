@@ -12,8 +12,8 @@ import SwiftUI
 struct BallraeWidgetExtensionBundle: WidgetBundle {
     var body: some Widget {
         BallraeWidgetExtension()
-        BallraeWidgetExtensionControl()
-        BallraeWidgetExtensionLiveActivity()
+       //BallraeWidgetExtensionControl()
+        BallraeLiveActivity()
         BallraeLockWidget()          // ✅ 너가 방금 작성한 잠금화면 위젯
     }
 }

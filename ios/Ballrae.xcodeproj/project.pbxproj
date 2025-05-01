@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 55;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -13,6 +13,8 @@
 		5644E44F2DA0E0DF00453F6E /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5644E44E2DA0E0DF00453F6E /* WidgetKit.framework */; };
 		5644E4512DA0E0DF00453F6E /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5644E4502DA0E0DF00453F6E /* SwiftUI.framework */; };
 		5644E4622DA0E0E100453F6E /* BallraeWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5644E44D2DA0E0DF00453F6E /* BallraeWidgetExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		566A00872DC3086F00CD11CB /* BallraeLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566A00862DC3086F00CD11CB /* BallraeLiveActivityAttributes.swift */; };
+		566A00882DC308C500CD11CB /* BallraeLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566A00862DC3086F00CD11CB /* BallraeLiveActivityAttributes.swift */; };
 		5672FCA12DA0EC7D0085E12E /* SharedDataBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 5672FCA02DA0EC7A0085E12E /* SharedDataBridge.m */; };
 		5672FCA32DA0ED000085E12E /* SharedDataBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5672FCA22DA0ED000085E12E /* SharedDataBridge.swift */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
@@ -54,6 +56,7 @@
 		5644E4502DA0E0DF00453F6E /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		5644E4682DA0E2CD00453F6E /* Ballrae.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = Ballrae.entitlements; path = Ballrae/Ballrae.entitlements; sourceTree = "<group>"; };
 		5644E4692DA0E2DD00453F6E /* BallraeWidgetExtensionExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BallraeWidgetExtensionExtension.entitlements; sourceTree = "<group>"; };
+		566A00862DC3086F00CD11CB /* BallraeLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BallraeLiveActivityAttributes.swift; sourceTree = "<group>"; };
 		5672FCA02DA0EC7A0085E12E /* SharedDataBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SharedDataBridge.m; sourceTree = "<group>"; };
 		5672FCA22DA0ED000085E12E /* SharedDataBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedDataBridge.swift; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-Ballrae.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Ballrae.release.xcconfig"; path = "Target Support Files/Pods-Ballrae/Pods-Ballrae.release.xcconfig"; sourceTree = "<group>"; };
@@ -64,7 +67,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		5644E4662DA0E0E100453F6E /* Exceptions for "BallraeWidgetExtension" folder in "BallraeWidgetExtensionExtension" target */ = {
+		5644E4662DA0E0E100453F6E /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -74,18 +77,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		5644E4522DA0E0E000453F6E /* BallraeWidgetExtension */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				5644E4662DA0E0E100453F6E /* Exceptions for "BallraeWidgetExtension" folder in "BallraeWidgetExtensionExtension" target */,
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = BallraeWidgetExtension;
-			sourceTree = "<group>";
-		};
+		5644E4522DA0E0E000453F6E /* BallraeWidgetExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (5644E4662DA0E0E100453F6E /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = BallraeWidgetExtension; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -112,6 +104,7 @@
 		13B07FAE1A68108700A75B9A /* Ballrae */ = {
 			isa = PBXGroup;
 			children = (
+				566A00862DC3086F00CD11CB /* BallraeLiveActivityAttributes.swift */,
 				5672FCA22DA0ED000085E12E /* SharedDataBridge.swift */,
 				5672FCA02DA0EC7A0085E12E /* SharedDataBridge.m */,
 				5644E4682DA0E2CD00453F6E /* Ballrae.entitlements */,
@@ -358,6 +351,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				566A00872DC3086F00CD11CB /* BallraeLiveActivityAttributes.swift in Sources */,
 				5672FCA32DA0ED000085E12E /* SharedDataBridge.swift in Sources */,
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
 				5672FCA12DA0EC7D0085E12E /* SharedDataBridge.m in Sources */,
@@ -368,6 +362,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				566A00882DC308C500CD11CB /* BallraeLiveActivityAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -393,7 +388,7 @@
 				DEVELOPMENT_TEAM = 6FSXXFHUT9;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Ballrae/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -422,7 +417,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6FSXXFHUT9;
 				INFOPLIST_FILE = Ballrae/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -463,7 +458,7 @@
 				INFOPLIST_FILE = BallraeWidgetExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = BallraeWidgetExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -508,7 +503,7 @@
 				INFOPLIST_FILE = BallraeWidgetExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = BallraeWidgetExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -596,10 +591,7 @@
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
 				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					" ",
-				);
+				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
@@ -668,10 +660,7 @@
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
 				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					" ",
-				);
+				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				USE_HERMES = true;

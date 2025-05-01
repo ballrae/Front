@@ -1,30 +1,51 @@
-//
-//  SharedDataBridge.swift
-//  Ballrae
-//
-//  Created by 안지희 on 4/5/25.
-//
-
 import Foundation
 import WidgetKit
+import ActivityKit
 
 @objc(SharedDataBridge)
 class SharedDataBridge: NSObject {
-  private let suiteName = "group.com.jihee.ballrae" // App Group ID 정확히!
+  private let suiteName = "group.com.jihee.ballrae"
+
   @objc
   func saveMessage(_ message: String) {
     if let shared = UserDefaults(suiteName: suiteName) {
       shared.set(message, forKey: "homeMessage")
-      
-      // ✅ 홈 위젯 전체 새로고침
       WidgetCenter.shared.reloadAllTimelines()
-
-      // ✅ 잠금화면 위젯만 명시적으로 리프레시
       WidgetCenter.shared.reloadTimelines(ofKind: "BallraeLockWidget")
-      
-      print("✅ 저장됨 및 위젯 새로고침: \(message)")
-    } else {
-      print("❌ App Group UserDefaults 초기화 실패")
+    }
+  }
+  
+  @objc
+  func startLiveActivity(_ message: String) {
+    let attributes = BallraeAttributes(title: message)
+    let content = BallraeAttributes.ContentState(detail: "진행 중...")
+
+    do {
+      let activity = try Activity<BallraeAttributes>.request(
+        attributes: attributes,
+        contentState: content
+      )
+      print("✅ Live Activity 등록 성공! ID: \(activity.id)")
+    } catch {
+      print("❌ Live Activity 시작 실패: \(error)")
+    }
+  }
+
+
+  @objc
+  func updateLiveActivity(_ detail: String) {
+    Task {
+      if let activity = Activity<BallraeAttributes>.activities.first {
+        await activity.update(using: .init(detail: detail))
+      }
+    }
+  }
+  @objc
+  func endLiveActivity() {
+    Task {
+      if let activity = Activity<BallraeAttributes>.activities.first {
+        await activity.end(using: .init(detail: "완료됨"))
+      }
     }
   }
 }

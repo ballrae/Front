@@ -1,80 +1,37 @@
-//
-//  BallraeWidgetExtensionLiveActivity.swift
-//  BallraeWidgetExtension
-//
-//  Created by 안지희 on 4/5/25.
-//
-
 import ActivityKit
 import WidgetKit
 import SwiftUI
 
-struct BallraeWidgetExtensionAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
-        // Dynamic stateful properties about your activity go here!
-        var emoji: String
-    }
 
-    // Fixed non-changing properties about your activity go here!
-    var name: String
-}
-
-struct BallraeWidgetExtensionLiveActivity: Widget {
+struct BallraeLiveActivity: Widget {
     var body: some WidgetConfiguration {
-        ActivityConfiguration(for: BallraeWidgetExtensionAttributes.self) { context in
-            // Lock screen/banner UI goes here
+        ActivityConfiguration(for: BallraeAttributes.self) { context in
             VStack {
-                Text("Hello \(context.state.emoji)")
+                Text("🔔 알림")
+                    .font(.headline)
+                Text(context.state.detail) // 여기에 메시지가 순차적으로 뜰 예정!
+                    .font(.title3)
+                    .padding(.top, 4)
             }
-            .activityBackgroundTint(Color.cyan)
-            .activitySystemActionForegroundColor(Color.black)
-
+            .padding()
         } dynamicIsland: { context in
+            // 📱 다이나믹 아일랜드용 UI
             DynamicIsland {
-                // Expanded UI goes here.  Compose the expanded UI through
-                // various regions, like leading/trailing/center/bottom
                 DynamicIslandExpandedRegion(.leading) {
-                    Text("Leading")
+                    Text("📦")
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text("Trailing")
-                }
-                DynamicIslandExpandedRegion(.bottom) {
-                    Text("Bottom \(context.state.emoji)")
-                    // more content
+                    Text(context.state.detail)
                 }
             } compactLeading: {
-                Text("L")
+                Text("🚚")
             } compactTrailing: {
-                Text("T \(context.state.emoji)")
+                Text("🕒")
             } minimal: {
-                Text(context.state.emoji)
+                Text("⚾️")
             }
-            .widgetURL(URL(string: "http://www.apple.com"))
-            .keylineTint(Color.red)
         }
     }
 }
 
-extension BallraeWidgetExtensionAttributes {
-    fileprivate static var preview: BallraeWidgetExtensionAttributes {
-        BallraeWidgetExtensionAttributes(name: "World")
-    }
-}
 
-extension BallraeWidgetExtensionAttributes.ContentState {
-    fileprivate static var smiley: BallraeWidgetExtensionAttributes.ContentState {
-        BallraeWidgetExtensionAttributes.ContentState(emoji: "😀")
-     }
-     
-     fileprivate static var starEyes: BallraeWidgetExtensionAttributes.ContentState {
-         BallraeWidgetExtensionAttributes.ContentState(emoji: "🤩")
-     }
-}
-
-#Preview("Notification", as: .content, using: BallraeWidgetExtensionAttributes.preview) {
-   BallraeWidgetExtensionLiveActivity()
-} contentStates: {
-    BallraeWidgetExtensionAttributes.ContentState.smiley
-    BallraeWidgetExtensionAttributes.ContentState.starEyes
-}
