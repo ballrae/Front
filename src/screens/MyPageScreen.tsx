@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Button, Alert } from 'react-native';
 import { login } from '@react-native-seoul/kakao-login';
+import axios from 'axios';
 
 const MyPageScreen = () => {
 
@@ -8,11 +9,20 @@ const MyPageScreen = () => {
     try {
       const token = await login();
       console.log('카카오 로그인 성공', token);
+      //성공확인용 alert
       Alert.alert('로그인 성공', `AccessToken: ${token.accessToken}`);
+
+      //백엔드에 accesstoken 보내기
+      //주소는 바꾸세요 smu에서 test한 주소임
+      const response = await axios.post('http://172.20.26.173:8000/api/auth/kakao/', {
+        access_token: token.accessToken,
+      });
+      
+      console.log('백엔드 응답:', response.data);
     } catch (err) {
-      const error = err as Error;   // 👈 추가 (명시적 타입 캐스팅)
+      const error = err as Error;  
       console.error('카카오 로그인 실패', error);
-      Alert.alert('로그인 실패', error.message);
+      //Alert.alert('로그인 실패', error.message);
     }
   };
 
