@@ -11,7 +11,7 @@ const MyPageScreen = () => {
       const token = await login();
       Alert.alert('로그인 성공', `AccessToken: ${token.accessToken}`);
 
-      const response = await axios.post('http://localhost:8000/api/auth/kakao/', {
+      const response = await axios.post('http://localhost:8000/api/users/kakao/', {
         access_token: token.accessToken,
       });
 
@@ -27,7 +27,7 @@ const MyPageScreen = () => {
   const handleSetMyTeam = async (teamId: string) => {
     try {
       const res = await axios.patch(
-        'http://localhost:8000/api/auth/myteam/',
+        'http://localhost:8000/api/users/myteam/',
         { team_id: teamId },
         {
           headers: {
