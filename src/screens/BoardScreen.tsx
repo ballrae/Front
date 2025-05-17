@@ -1,31 +1,66 @@
-import React from 'react';
-import { View, Text, Button, StyleSheet } from 'react-native';
-import { saveMessageToWidget } from '../bridge/SharedData';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+  ListRenderItem,
+} from 'react-native';
+import axios from 'axios';
 
-const messages = [
-  '🔥 불꽃처럼 뜨겁게!',
-  '📌 오늘 할 일 완료!',
-  '💪 지희 최고!',
-  '📝 기록 완료!',
-  '🌟 위젯 테스트 성공!',
-  '🎉 오늘도 수고했어!'
-];
-
-const getRandomMessage = () => {
-  const index = Math.floor(Math.random() * messages.length);
-  return messages[index];
-};
+interface Team {
+  id: string;              
+  team_name: string;
+  team_logo: string;       
+}
 
 const BoardScreen = () => {
-  const handleSave = () => {
-    const message = getRandomMessage();
-    saveMessageToWidget(message);
-  };
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const response = await axios.get('http://localhost:8000/api/teams/');
+        setTeams(response.data.responseDto); // 서버 응답 그대로 활용
+      } catch (error) {
+        console.error('팀 목록 불러오기 실패:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTeams();
+  }, []);
+
+  const renderTeamItem: ListRenderItem<Team> = ({ item }) => (
+    <TouchableOpacity style={styles.teamItem}>
+      <View style={styles.logoWrapper}>
+        <Image source={{ uri: item.team_logo }} style={styles.logo} />
+      </View>
+      <Text style={styles.teamText}>{item.team_name} 게시판</Text>
+    </TouchableOpacity>
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>여기는 게시판입니다 🗣️</Text>
-      <Button title="랜덤 메시지 위젯에 보내기" onPress={handleSave} />
+      <Text style={styles.title}>게시판</Text>
+      <FlatList
+        data={teams}
+        keyExtractor={(item) => item.id}
+        renderItem={renderTeamItem}
+      />
     </View>
   );
 };
@@ -33,6 +68,42 @@ const BoardScreen = () => {
 export default BoardScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 20, marginBottom: 16 },
+  container: {
+    flex: 1,
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    backgroundColor: 'white',
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  teamItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  logoWrapper: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  logo: {
+    width: 40,
+    aspectRatio: 1,
+    resizeMode: 'contain',
+  },
+  teamText: {
+    fontSize: 16,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
