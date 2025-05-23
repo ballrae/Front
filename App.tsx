@@ -1,10 +1,9 @@
 // App.tsx
-//진입점
 import React from 'react';
-import BottomTabNavigator from './src/navigation/BottomTabNavigator';
+import AppNavigator from './src/navigation/AppNavigator';
 
 function App(): React.JSX.Element {
-  return <BottomTabNavigator />;
+  return <AppNavigator />;
 }
 
 export default App;

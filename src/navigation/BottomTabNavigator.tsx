@@ -11,7 +11,7 @@ const Tab = createBottomTabNavigator();
 
 const BottomTabNavigator = () => {
     return (
-        <NavigationContainer>
+        
             <Tab.Navigator
             screenOptions={{
                 tabBarActiveTintColor: '#007AFF',
@@ -24,7 +24,7 @@ const BottomTabNavigator = () => {
               <Tab.Screen name="기록실" component={ArchiveScreen} />
               <Tab.Screen name="마이페이지" component={MyPageScreen} />
             </Tab.Navigator>
-          </NavigationContainer>
+         
     )
 }
 
