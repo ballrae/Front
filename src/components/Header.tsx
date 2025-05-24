@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWindowDimensions } from 'react-native';
@@ -29,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.container, { paddingHorizontal: width * 0.04 }]}>
+      <View style={styles.container}>
         {/* Back 버튼 */}
         {showBackButton ? (
           <TouchableOpacity onPress={onBackPress} style={styles.iconWrapper}>
@@ -60,6 +59,7 @@ export default Header;
 const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: '#fff',
+    margin:10,
   },
   container: {
     height:  20,

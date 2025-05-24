@@ -62,24 +62,23 @@ const MyTeamScreen = () => {
 
   return (
     <View style={styles.container}>
-      <FlatList
-        ListHeaderComponent={
-          <View style={styles.headerWrapper}>
-            <Header
-              title="마이팀 설정"
-              showBackButton
-              onBackPress={() => navigation.goBack()}
-              showCompleteButton
-              onCompletePress={handleComplete}
-            />
-          </View>
-        }
-        contentContainerStyle={styles.listContent}
-        data={teams}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        numColumns={2}
-      />
+<FlatList
+  ListHeaderComponent={
+    <Header
+      title="마이팀 설정"
+      showBackButton
+      onBackPress={() => navigation.goBack()}
+      showCompleteButton
+      onCompletePress={handleComplete}
+    />
+  }
+  data={teams}
+  keyExtractor={(item) => item.id}
+  renderItem={renderItem}
+  numColumns={2}
+  // padding을 헤더 포함 전체가 아니라 리스트 항목에만 적용
+  contentContainerStyle={styles.listOnlyContent}
+/>
     </View>
   );
 };
@@ -94,9 +93,9 @@ const styles = StyleSheet.create({
   headerWrapper: {
     paddingHorizontal: 0,
   },
-  listContent: {
-    padding: 20,
-    justifyContent: 'space-between',
+  listOnlyContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   logoWrapper: {
     flex: 1,

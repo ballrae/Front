@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Image, TouchableOpacity, Alert,
 } from 'react-native';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosInstance'; // axiosInstance 사용
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -23,10 +23,13 @@ const MyPageScreen = () => {
 
   const fetchUserInfo = async () => {
     const token = await AsyncStorage.getItem('accessToken');
-    if (!token) return;
+    if (!token) {
+      setIsLoggedIn(false); // 로그인이 안되어있을 때 유저 정보 불러오지 않는 로직
+      return;
+    }
 
     try {
-      const res = await axios.get('http://localhost:8000/api/users/me/', {
+      const res = await axiosInstance.get('/api/users/me/', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
