@@ -17,7 +17,7 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ 응답 인터셉터: 401 → 토큰 재발급 시도
+//  응답 인터셉터: 401 → 토큰 재발급 시도
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
