@@ -8,17 +8,23 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/RootStackParamList';
 import teamLogoMap from '../constants/teamLogos';
 import LogoHeader from '../components/LogoHeader';
+
+type Navigation = NativeStackNavigationProp<RootStackParamList, 'PostScreen'>;
 
 interface Team {
   id: string;
   team_name: string;
 }
 
-const BoardScreen = () => {
+const PostScreen = () => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigation = useNavigation<Navigation>();
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -26,7 +32,6 @@ const BoardScreen = () => {
         const response = await fetch('http://localhost:8000/api/teams/');
         const result = await response.json();
 
-        // ✅ 정렬 추가
         const sorted = result.responseDto.sort((a: Team, b: Team) =>
           a.team_name.localeCompare(b.team_name, 'ko')
         );
@@ -47,7 +52,15 @@ const BoardScreen = () => {
       teamLogoMap[item.id] || require('../assets/app_logos/ballrae_logo_white.png');
 
     return (
-      <TouchableOpacity style={styles.teamItem}>
+      <TouchableOpacity
+        style={styles.teamItem}
+        onPress={() =>
+          navigation.navigate('TeamPostScreen', {
+            teamId: item.id,
+            teamName: item.team_name,
+          })
+        }
+      >
         <Image source={logoSource} style={styles.logo} />
         <Text style={styles.teamText}>{item.team_name} 게시판</Text>
       </TouchableOpacity>
@@ -75,7 +88,7 @@ const BoardScreen = () => {
   );
 };
 
-export default BoardScreen;
+export default PostScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -89,7 +102,7 @@ const styles = StyleSheet.create({
   teamItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15, // 게시판 리스트 간격
+    paddingVertical: 15,
   },
   logo: {
     width: 40,
@@ -99,7 +112,7 @@ const styles = StyleSheet.create({
   },
   teamText: {
     fontSize: 16,
-    fontWeight: '600', // 세미볼드
+    fontWeight: '600',
   },
   loaderContainer: {
     flex: 1,

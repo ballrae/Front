@@ -15,6 +15,8 @@ interface HeaderProps {
   onBackPress?: () => void;
   showCompleteButton?: boolean;
   onCompletePress?: () => void;
+  showWriteButton?: boolean;
+  onWritePress?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -23,13 +25,15 @@ const Header: React.FC<HeaderProps> = ({
   onBackPress,
   showCompleteButton = false,
   onCompletePress,
+  showWriteButton = false,
+  onWritePress,
 }) => {
   const { width } = useWindowDimensions();
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Back 버튼 */}
+        {/* ← Back 버튼 */}
         {showBackButton ? (
           <TouchableOpacity onPress={onBackPress} style={styles.iconWrapper}>
             <BackIcon width={20} height={20} />
@@ -41,10 +45,14 @@ const Header: React.FC<HeaderProps> = ({
         {/* 제목 */}
         <Text style={styles.title}>{title}</Text>
 
-        {/* 완료 버튼 */}
+        {/* 오른쪽 버튼 (완료 또는 글쓰기) */}
         {showCompleteButton ? (
           <TouchableOpacity onPress={onCompletePress}>
             <Text style={styles.complete}>완료</Text>
+          </TouchableOpacity>
+        ) : showWriteButton ? (
+          <TouchableOpacity onPress={onWritePress}>
+            <Text style={styles.write}>글쓰기</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.iconPlaceholder} />
@@ -58,11 +66,11 @@ export default Header;
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: '#fff',
-    margin:10,
+    marginRight:15,
+    marginLeft:2,
   },
   container: {
-    height:  20,
+    height: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -71,14 +79,19 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   iconPlaceholder: {
-    width: 40,
+    width: 60,
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600', // 세미볼드
     textAlign: 'center',
   },
   complete: {
+    fontSize: 16,
+    color: '#408A21',
+    fontWeight: '600',
+  },
+  write: {
     fontSize: 16,
     color: '#408A21',
     fontWeight: '600',
