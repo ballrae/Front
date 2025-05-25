@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import HomeScreen from '../screens/HomeScreen';
-import BoardScreen from '../screens/BoardScreen';
+import PostScreen from '../screens/PostScreen';
 import ArchiveScreen from '../screens/ArchiveScreen';
 import MyPageScreen from '../screens/MyPageScreen';
 
@@ -48,7 +48,7 @@ const BottomTabNavigator = () => {
       />
       <Tab.Screen
         name=" 게시판"
-        component={BoardScreen}
+        component={PostScreen}
         options={{
           tabBarIcon: ({ color, focused }) =>
             focused ? <BoardSelectIcon width={28} height={28} /> : <BoardIcon width={28} height={28} fill={color} />,
