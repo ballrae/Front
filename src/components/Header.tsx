@@ -43,7 +43,9 @@ const Header: React.FC<HeaderProps> = ({
         )}
 
         {/* 제목 */}
-        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+        {title}
+        </Text>
 
         {/* 오른쪽 버튼 (완료 또는 글쓰기) */}
         {showCompleteButton ? (
@@ -82,9 +84,13 @@ const styles = StyleSheet.create({
     width: 60,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600', // 세미볼드
-    textAlign: 'center',
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  textAlign: 'center',
+  fontSize: 18,
+  fontWeight: '600',
+  zIndex: -1,
   },
   complete: {
     fontSize: 16,
