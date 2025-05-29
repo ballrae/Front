@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator,
   TextInput, TouchableOpacity, Alert, KeyboardAvoidingView,
   Platform, Keyboard, TouchableWithoutFeedback, Image,
 } from 'react-native';
 import Header from '../components/Header';
-import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
+import { RouteProp, useRoute, useNavigation, useIsFocused } from '@react-navigation/native';
 import teamLogoMap from '../constants/teamLogos';
 import axiosInstance from '../utils/axiosInstance';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import LikeIcon from '../assets/icons/like.svg';
 import LikeActiveIcon from '../assets/icons/like_active.svg';
 import ChatIcon from '../assets/icons/chat.svg';
@@ -49,6 +49,7 @@ const DetailPostScreen = () => {
   const route = useRoute<DetailPostRouteProp>();
   const { teamId, teamName, postId } = route.params;
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
 
   const [post, setPost] = useState<PostDetail | null>(null);
   const [comments, setComments] = useState<CommentItem[]>([]);
@@ -58,11 +59,28 @@ const DetailPostScreen = () => {
   const fetchPostAndComments = async () => {
     try {
       setLoading(true);
+      const token = await AsyncStorage.getItem('accessToken');
+
       const [postRes, commentsRes] = await Promise.all([
-        axiosInstance.get(`/api/posts/${teamId}/${postId}`),
-        axiosInstance.get(`/api/posts/${teamId}/${postId}/comments/`),
+        axiosInstance.get(`/api/posts/${teamId}/${postId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axiosInstance.get(`/api/posts/${teamId}/${postId}/comments/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
-      setPost(postRes.data.data);
+
+      const postData = postRes.data.data;
+
+      // ✅ 저장된 likedPost 목록에서 포함 여부 확인
+      const liked = await AsyncStorage.getItem('likedPosts');
+      const likedIds: number[] = liked ? JSON.parse(liked) : [];
+
+      if (likedIds.includes(postData.postId)) {
+        postData.isLiked = true;
+      }
+
+      setPost(postData);
       setComments(commentsRes.data.data);
     } catch (err) {
       Alert.alert('불러오기 실패', '게시글 또는 댓글 데이터를 가져오지 못했습니다.');
@@ -70,11 +88,22 @@ const DetailPostScreen = () => {
       setLoading(false);
     }
   };
-
   const toggleLike = async () => {
     try {
       const res = await axiosInstance.post(`/api/posts/${teamId}/${postId}/like/`);
       const { isLiked, likesCount } = res.data.data;
+
+      // ✅ AsyncStorage에 likedPosts 배열로 저장
+      let liked = await AsyncStorage.getItem('likedPosts');
+      let likedIds: number[] = liked ? JSON.parse(liked) : [];
+
+      if (isLiked) {
+        if (!likedIds.includes(postId)) likedIds.push(postId);
+      } else {
+        likedIds = likedIds.filter(id => id !== postId);
+      }
+
+      await AsyncStorage.setItem('likedPosts', JSON.stringify(likedIds));
       setPost(prev => prev ? { ...prev, isLiked, likesCount } : prev);
     } catch {
       Alert.alert('좋아요 실패', '잠시 후 다시 시도해주세요.');
@@ -96,15 +125,17 @@ const DetailPostScreen = () => {
   };
 
   useEffect(() => {
-    fetchPostAndComments();
-  }, [teamId, postId]);
+    if (isFocused) {
+      fetchPostAndComments();
+    }
+  }, [isFocused]);
 
   if (loading || !post) {
     return <ActivityIndicator size="large" style={{ marginTop: 50 }} />;
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView key={postId} style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
           <Header title={`${teamName} 게시판`} showBackButton onBackPress={() => navigation.goBack()} />
@@ -169,7 +200,6 @@ const DetailPostScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  // 스타일은 동일하게 유지
   container: { flex: 1, backgroundColor: 'white' },
   contentWrapper: { padding: 20, paddingBottom: 100 },
   profileRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },

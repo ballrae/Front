@@ -3,7 +3,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8000', // 실제 API 주소로 변경 필요
+  baseURL:'http://127.0.0.1:8000', // 실제 API 주소로 변경 필요
 });
 
 axiosInstance.interceptors.request.use(
