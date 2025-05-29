@@ -12,6 +12,8 @@ import FlagIcon from '../assets/icons/flag_icon.svg';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 import { useIsFocused } from '@react-navigation/native';
+import { TouchableOpacity } from 'react-native';
+
 
 interface Post {
   postId: number;
@@ -53,13 +55,19 @@ const TeamPostsScreen = () => {
     return dateOnly.replace(/-/g, '.');
   };
 
+
   const renderPost = ({ item }: { item: Post }) => (
-    <View
+    <TouchableOpacity
       style={[
         styles.postItem,
         item.isPinned && styles.pinnedBackground,
         item.isPinned && styles.pinnedBorder,
       ]}
+      onPress={() => navigation.navigate('DetailPostScreen', {
+        teamId,
+        teamName,
+        postId: item.postId,
+      })}
     >
       <View style={styles.leftSection}>
         {item.isPinned && (
@@ -70,7 +78,7 @@ const TeamPostsScreen = () => {
         </Text>
       </View>
       <Text style={styles.date}>{formatDate(item.createdAt)}</Text>
-    </View>
+    </TouchableOpacity>
   );
 
   if (loading) {

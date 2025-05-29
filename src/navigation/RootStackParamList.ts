@@ -9,5 +9,8 @@ export type RootStackParamList = {
   WritePostScreen: {
      teamId: string; 
      teamName: string };
+  DetailPostScreen: { 
+    teamId: string; 
+    postId: number };
 };
 
