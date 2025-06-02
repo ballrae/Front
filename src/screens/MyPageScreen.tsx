@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Image, TouchableOpacity, Alert,
 } from 'react-native';
-import axiosInstance from '../utils/axiosInstance'; // axiosInstance 사용
+import axiosInstance from '../utils/axiosInstance';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,6 +10,8 @@ import { RootStackParamList } from '../navigation/RootStackParamList';
 import Header from '../components/Header';
 import KakaoButtonIcon from '../assets/kakao_btn.svg';
 import teamLogoMap from '../constants/teamLogos';
+
+import { login } from '@react-native-seoul/kakao-login';
 
 const MyPageScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -24,7 +26,7 @@ const MyPageScreen = () => {
   const fetchUserInfo = async () => {
     const token = await AsyncStorage.getItem('accessToken');
     if (!token) {
-      setIsLoggedIn(false); // 로그인이 안되어있을 때 유저 정보 불러오지 않는 로직
+      setIsLoggedIn(false);
       return;
     }
 
@@ -43,7 +45,36 @@ const MyPageScreen = () => {
       setIsLoggedIn(true);
     } catch (error) {
       console.error('유저 정보 불러오기 실패:', error);
+      setIsLoggedIn(false);
       Alert.alert('에러', '유저 정보를 불러오지 못했습니다.');
+    }
+  };
+
+  const handleKakaoLogin = async () => {
+    try {
+      const token = await login();
+      console.log('Kakao access token:', token.accessToken);
+
+    const res = await axiosInstance.post('/api/users/kakao/', {
+    access_token: token.accessToken,
+      });
+
+      // ✅ 응답에서 정확한 위치로 접근
+      const { access, refresh } = res.data.data.tokens;
+
+      // 예외 처리 추가
+      if (!access || !refresh) {
+        throw new Error('JWT 토큰이 응답에 포함되지 않았습니다.');
+      }
+
+      await AsyncStorage.setItem('accessToken', access);
+      await AsyncStorage.setItem('refreshToken', refresh);
+
+      // 로그인 이후 유저 정보 불러오기
+      await fetchUserInfo();
+    } catch (err) {
+      console.error('카카오 로그인 실패:', err);
+      Alert.alert('로그인 실패', '카카오 로그인 중 문제가 발생했습니다.');
     }
   };
 
@@ -65,7 +96,7 @@ const MyPageScreen = () => {
           <Image source={require('../assets/app_logos/ballrae_logo_white.png')} style={styles.logo} />
           <View style={styles.loginTextBox}>
             <Text style={styles.text}>로그인을 해 주세요.</Text>
-            <TouchableOpacity style={styles.kakaoBtnWrapper}>
+            <TouchableOpacity style={styles.kakaoBtnWrapper} onPress={handleKakaoLogin}>
               <KakaoButtonIcon width={160} height={42} />
             </TouchableOpacity>
           </View>

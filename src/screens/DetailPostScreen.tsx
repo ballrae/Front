@@ -29,6 +29,7 @@ interface PostDetail {
   isPinned: boolean;
   likesCount: number;
   isLiked: boolean;
+  imageUri?: string;  // 추가
 }
 
 interface CommentItem {
@@ -44,6 +45,8 @@ const formatDate = (iso: string) => {
   const date = new Date(iso);
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
+
+// ... (기존 import 구문은 동일하므로 생략)
 
 const DetailPostScreen = () => {
   const route = useRoute<DetailPostRouteProp>();
@@ -72,9 +75,11 @@ const DetailPostScreen = () => {
 
       const postData = postRes.data.data;
 
-      // ✅ 저장된 likedPost 목록에서 포함 여부 확인
       const liked = await AsyncStorage.getItem('likedPosts');
       const likedIds: number[] = liked ? JSON.parse(liked) : [];
+
+      const storedImageUri = await AsyncStorage.getItem(`postImage-${postData.postId}`);
+      postData.imageUri = storedImageUri;
 
       if (likedIds.includes(postData.postId)) {
         postData.isLiked = true;
@@ -88,12 +93,12 @@ const DetailPostScreen = () => {
       setLoading(false);
     }
   };
+
   const toggleLike = async () => {
     try {
       const res = await axiosInstance.post(`/api/posts/${teamId}/${postId}/like/`);
       const { isLiked, likesCount } = res.data.data;
 
-      // ✅ AsyncStorage에 likedPosts 배열로 저장
       let liked = await AsyncStorage.getItem('likedPosts');
       let likedIds: number[] = liked ? JSON.parse(liked) : [];
 
@@ -150,6 +155,12 @@ const DetailPostScreen = () => {
             </View>
 
             <Text style={styles.title}>{post.title}</Text>
+
+            {/* ✅ 이미지가 존재할 경우 렌더링 */}
+            {post.imageUri && (
+              <Image source={{ uri: post.imageUri }} style={styles.postImage} />
+            )}
+
             <Text style={styles.content}>{post.content}</Text>
 
             <View style={styles.reactionBar}>
@@ -208,6 +219,13 @@ const styles = StyleSheet.create({
   nickname: { fontSize: 16, fontWeight: '500', color: '#000' },
   date: { fontSize: 12, color: '#666', marginTop: 2 },
   title: { fontSize: 18, fontWeight: '600', marginBottom: 10 },
+  postImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    resizeMode: 'cover',
+    marginBottom: 16,
+  },
   content: { fontSize: 14, lineHeight: 24, marginBottom: 20 },
   reactionBar: {
     flexDirection: 'row',
