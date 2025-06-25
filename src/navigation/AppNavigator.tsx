@@ -11,7 +11,7 @@ import MyTeamScreen from '../screens/MyTeamScreen';
 import TeamPostScreen from '../screens/TeamPostScreen';
 import WritePostScreen from '../screens/WritePostScreen';
 import DetailPostScreen from '../screens/DetailPostScreen';
-
+import LiveGameScreen from '../screens/LiveGameScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
@@ -24,6 +24,7 @@ const AppNavigator = () => {
         <Stack.Screen name="TeamPostScreen" component={TeamPostScreen} />
         <Stack.Screen name="WritePostScreen" component={WritePostScreen} />
         <Stack.Screen name="DetailPostScreen" component={DetailPostScreen}/>
+        <Stack.Screen name="LiveGameScreen" component={LiveGameScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

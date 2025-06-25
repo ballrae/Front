@@ -13,5 +13,10 @@ export type RootStackParamList = {
     teamId: string; 
     teamName: string;
     postId: number };
+  LiveGameScreen: {
+    gameId: string;
+    homeTeamName: string;
+    awayTeamName: string;
+  };
 };
 
