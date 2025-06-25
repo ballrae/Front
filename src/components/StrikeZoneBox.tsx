@@ -40,7 +40,7 @@ const StrikeZoneBox = ({
 }: Props) => {
   const [top, bottom, right, left] = strikeZone;
 
-  // 스트존 좌표 기준 보기 영역 설정 (좌표계 기준)
+  // 스트존 좌표 기준 보기 영역 설정
   const padding = 1.0;
   const viewTop = top + padding;
   const viewBottom = bottom - padding;
@@ -54,18 +54,51 @@ const StrikeZoneBox = ({
   const mapX = (x: number) => ((x - viewLeft) / viewWidth) * width;
   const mapY = (y: number) => ((viewTop - y) / viewHeight) * height;
 
-  // 고정된 픽셀 기반 스트존 박스
-  const ZONE_WIDTH = width * 0.75;
-  const ZONE_HEIGHT = height * 0.75;
+  // 스트존 위치 및 크기
+  const ZONE_WIDTH = width * 0.65;
+  const ZONE_HEIGHT = height * 0.65;
   const ZONE_LEFT = (width - ZONE_WIDTH) / 2;
   const ZONE_TOP = (height - ZONE_HEIGHT) / 2;
-
   const cellW = ZONE_WIDTH / 3;
   const cellH = ZONE_HEIGHT / 3;
 
   return (
-    <View style={[{ width, height, backgroundColor: '#228B22' }, style]}>
-      {/* 스트존 그리드 박스 */}
+    <View
+      style={[
+        {
+          width,
+          height,
+          backgroundColor: '#3e8e22',
+          position: 'relative',
+        },
+        style,
+      ]}
+    >
+      {/* 왼쪽 테두리 선 */}
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: 1,
+          height: height,
+          backgroundColor: 'rgba(0,0,0,0.2)',
+        }}
+      />
+
+      {/* 상단 테두리 선 */}
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: width,
+          height: 1,
+          backgroundColor: 'rgba(0,0,0,0.2)',
+        }}
+      />
+
+      {/* 스트존 박스 */}
       <View
         style={{
           position: 'absolute',
@@ -78,7 +111,7 @@ const StrikeZoneBox = ({
           borderWidth: 1,
         }}
       >
-        {/* 격자선: 픽셀 기준 3x3 정확 분할 */}
+        {/* 가로 격자 */}
         {[1, 2].map(i => (
           <View
             key={`h-${i}`}
@@ -92,6 +125,8 @@ const StrikeZoneBox = ({
             }}
           />
         ))}
+
+        {/* 세로 격자 */}
         {[1, 2].map(i => (
           <View
             key={`v-${i}`}
@@ -107,7 +142,7 @@ const StrikeZoneBox = ({
         ))}
       </View>
 
-      {/* 투구 공 */}
+      {/* 투구 공 표시 */}
       {pitches.map((pitch, idx) => {
         const px = mapX(pitch.x);
         const py = mapY(pitch.y);
@@ -119,15 +154,15 @@ const StrikeZoneBox = ({
               position: 'absolute',
               left: px - 8,
               top: py - 8,
-              width: 16,
-              height: 16,
+              width: 18,
+              height: 18,
               borderRadius: 8,
               backgroundColor: getPitchColor(pitch.pitchResult),
               justifyContent: 'center',
               alignItems: 'center',
               borderWidth: 1.5,
               borderColor: 'white',
-             zIndex: pitch.pitchNum,
+              zIndex: pitch.pitchNum,
             }}
           >
             <Text

@@ -1,8 +1,20 @@
-// HomeScreen.tsx
 import React from 'react';
-import { View, Text, FlatList, Image, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
+
 import LogoHeader from '../components/LogoHeader';
 import teamLogoMap from '../constants/teamLogos';
+
+// 네비게이션
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/RootStackParamList';
 
 const dummyGames = [
   {
@@ -69,14 +81,25 @@ const statusStyleMap: { [key: string]: string } = {
 };
 
 const HomeScreen = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'LiveGameScreen'>>();
+
   return (
     <View style={styles.container}>
-      <LogoHeader title='최근 경기'/>
+      <LogoHeader title="최근 경기" />
       <FlatList
         data={dummyGames}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() =>
+              navigation.navigate('LiveGameScreen', {
+                gameId: item.id,
+                homeTeamName: item.homeTeamName,
+                awayTeamName: item.awayTeamName,
+              })
+            }
+          >
             <View style={styles.row}>
               {/* Home Team */}
               <View style={styles.teamLeft}>
@@ -106,7 +129,7 @@ const HomeScreen = () => {
                 </View>
               </View>
 
-              {/* Away Team (reversed layout) */}
+              {/* Away Team */}
               <View style={styles.teamRight}>
                 <View style={styles.teamTextBoxRight}>
                   <Text style={styles.teamTextLine}>{item.awayTeamName.split(' ')[0]}</Text>
@@ -115,7 +138,7 @@ const HomeScreen = () => {
                 <Image source={teamLogoMap[item.awayTeam]} style={styles.logo} />
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       />
     </View>
@@ -130,23 +153,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingHorizontal: 16,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginVertical: 8,
-  },
   card: {
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderColor: '#eee',
-    //marginBottom:10,
-    //marginVertical:10,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginVertical:10,
+    marginVertical: 10,
   },
   teamLeft: {
     flexDirection: 'row',
@@ -204,8 +220,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 12,
-    minWidth:50,
-    alignItems: 'center', 
+    minWidth: 50,
+    alignItems: 'center',
   },
   statusText: {
     color: '#fff',
