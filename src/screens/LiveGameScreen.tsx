@@ -7,62 +7,21 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+// 네비게이션
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/RootStackParamList';
-import Header from '../components/Header';
+// 매핑
 import teamLogoMap from '../constants/teamLogos';
-import FieldStatusBoard from '../components/livegame/FieldStatusBoard';
 import teamNameToId from '../constants/teamIdMap';
+//컴포넌트
+import Header from '../components/Header';
+import FieldStatusBoard from '../components/livegame/FieldStatusBoard';
 import PlayerInfoBoard from '../components/livegame/PlayerInfoBoard';
+import LiveTextBroadcast from '../components/livegame/LiveTextBroadcast'
 
 const innings = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-const dummyInningPlay = {
-  inning: 6,
-  play_by_play: [
-    {
-      batter: '양석환',
-      batting_hand: '우타',
-      at_bat: [
-        { pitch_num: 1, type: 'S', pitch: '직구' },
-        { pitch_num: 2, type: 'S', pitch: '슬라이더' },
-        { pitch_num: 3, type: 'B', pitch: '체인지업' },
-        { pitch_num: 4, type: 'S', pitch: '직구' },
-      ],
-      final_result: {
-        code: 'K',
-        description: '루킹 스트라이크 아웃',
-      },
-    },
-    {
-      batter: '강승호',
-      batting_hand: '우타',
-      at_bat: [
-        { pitch_num: 1, type: 'B', pitch: '직구' },
-        { pitch_num: 2, type: 'S', pitch: '직구' },
-        { pitch_num: 3, type: 'S', pitch: '슬라이더' },
-        { pitch_num: 4, type: 'F', pitch: '커브' },
-      ],
-      final_result: {
-        code: 'K',
-        description: '루킹 스트라이크 아웃',
-      },
-    },
-    {
-      batter: '양의지',
-      batting_hand: '우타',
-      at_bat: [
-        { pitch_num: 1, type: 'S', pitch: '직구' },
-        { pitch_num: 2, type: 'F', pitch: '슬라이더' },
-      ],
-      final_result: {
-        code: 'G',
-        description: '1루수 땅볼',
-      },
-    },
-  ],
-};
 
 const LiveGameScreen = () => {
   const route = useRoute<RouteProp<RootStackParamList, 'LiveGameScreen'>>();
@@ -120,38 +79,13 @@ const LiveGameScreen = () => {
         <PlayerInfoBoard />
       </View>
 
-      {/* 회차 탭 */}
-      <View style={styles.inningTabs}>
-        {innings.map((num) => (
-          <TouchableOpacity key={num} onPress={() => setSelectedInning(num)}>
-            <Text style={[styles.inningTabText, selectedInning === num && styles.selectedTab]}>
-              {num}회
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={{ marginBottom: 24 }}>
+        <LiveTextBroadcast />
       </View>
 
-      {/* 중계 */}
-      <Text style={styles.inningTitle}>{selectedInning}회</Text>
-      {dummyInningPlay.play_by_play.map((item, index) => (
-        <View key={`${item.batter}_${index}`} style={styles.playRow}>
-          <Image
-            source={require('../assets/app_logos/ballrae_logo_white.png')}
-            style={styles.playerImage}
-          />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.batterName}>
-              {item.batter} ({item.batting_hand})
-            </Text>
-            {item.at_bat.map((p) => (
-              <Text key={p.pitch_num} style={styles.pitchText}>
-                {p.pitch_num}구 {p.pitch}
-              </Text>
-            ))}
-            <Text style={styles.resultText}>⚾ {item.final_result.description}</Text>
-          </View>
-        </View>
-      ))}
+
+
+      
     </ScrollView>
   );
 };
