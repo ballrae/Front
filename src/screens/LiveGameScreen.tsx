@@ -79,9 +79,9 @@ const LiveGameScreen = () => {
         <PlayerInfoBoard />
       </View>
 
-      <View style={{ marginBottom: 24 }}>
-        <LiveTextBroadcast />
-      </View>
+        <View style={{ marginBottom: 24 }}>
+          <LiveTextBroadcast />
+        </View>
 
 
 
