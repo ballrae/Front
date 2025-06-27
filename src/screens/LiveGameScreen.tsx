@@ -1,20 +1,20 @@
-// LiveGameScreen.tsx
 import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   Image,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 import Header from '../components/Header';
 import teamLogoMap from '../constants/teamLogos';
-import FieldStatusBoard from '../components/FieldStatusBoard';
-
+import FieldStatusBoard from '../components/livegame/FieldStatusBoard';
+import teamNameToId from '../constants/teamIdMap';
+import PlayerInfoBoard from '../components/livegame/PlayerInfoBoard';
 
 const innings = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
@@ -68,50 +68,57 @@ const LiveGameScreen = () => {
   const route = useRoute<RouteProp<RootStackParamList, 'LiveGameScreen'>>();
   const navigation = useNavigation();
   const { gameId, homeTeamName, awayTeamName } = route.params;
-
-  const homeTeamId = homeTeamName.split(' ')[0];
-  const awayTeamId = awayTeamName.split(' ')[0];
+  const homeTeamId = teamNameToId[homeTeamName.split(' ')[0]];
+  const awayTeamId = teamNameToId[awayTeamName.split(' ')[0]];
 
   const [selectedInning, setSelectedInning] = useState(6);
 
   return (
-    
-    <View style={styles.container}>
-       <View style={{ marginHorizontal: -16 }}>
-      <Header
-        title={`${homeTeamName.split(' ')[0]} vs ${awayTeamName.split(' ')[0]}`}
-        showBackButton
-        onBackPress={() => navigation.goBack()}
-      />
+    <ScrollView style={styles.container}>
+      <View>
+        <Header
+          title={`${homeTeamName.split(' ')[0]} vs ${awayTeamName.split(' ')[0]}`}
+          showBackButton
+          onBackPress={() => navigation.goBack()}
+        />
       </View>
 
       <View style={{ marginHorizontal: -16 }}>
         <FieldStatusBoard />
       </View>
-       
+
       {/* 스코어 */}
       <View style={styles.scoreBoxFull}>
-        <Image source={teamLogoMap[homeTeamId]} style={styles.logo} />
-        <View style={styles.teamBlock}>
-          <Text style={styles.teamLabel}>{homeTeamName.split(' ')[0]}</Text>
-          <Text style={styles.teamLabel}>{homeTeamName.split(' ')[1]}</Text>
+        <View style={styles.teamBlockContainer}>
+          <Image source={teamLogoMap[homeTeamId]} style={styles.logo} />
+          <View style={[styles.teamBlock, { alignItems: 'flex-start' }]}>
+            <Text style={styles.teamLabel}>{homeTeamName.split(' ')[0]}</Text>
+            <Text style={styles.teamLabel}>{homeTeamName.split(' ')[1]}</Text>
+          </View>
         </View>
+
         <View style={styles.scoreSet}>
-          <Text style={styles.inningText}>6회 초</Text>
+          <Text style={styles.inningText}>{selectedInning}회</Text>
           <View style={styles.scoreNumbers}>
             <Text style={styles.score}>1</Text>
             <Text style={styles.vs}>vs</Text>
             <Text style={styles.score}>4</Text>
           </View>
         </View>
-        <View style={styles.teamBlock}>
-          <Text style={styles.teamLabel}>{awayTeamName.split(' ')[0]}</Text>
-          <Text style={styles.teamLabel}>{awayTeamName.split(' ')[1]}</Text>
+
+        <View style={styles.teamBlockContainer}>
+          <View style={[styles.teamBlock, { alignItems: 'flex-end' }]}>
+            <Text style={styles.teamLabel}>{awayTeamName.split(' ')[0]}</Text>
+            <Text style={styles.teamLabel}>{awayTeamName.split(' ')[1]}</Text>
+          </View>
+          <Image source={teamLogoMap[awayTeamId]} style={styles.logo} />
         </View>
-        <Image source={teamLogoMap[awayTeamId]} style={styles.logo} />
       </View>
 
-     
+      {/* 투타 정보 */}
+      <View style={{ marginBottom: 24 }}>
+        <PlayerInfoBoard />
+      </View>
 
       {/* 회차 탭 */}
       <View style={styles.inningTabs}>
@@ -126,28 +133,26 @@ const LiveGameScreen = () => {
 
       {/* 중계 */}
       <Text style={styles.inningTitle}>{selectedInning}회</Text>
-      <FlatList
-        data={dummyInningPlay.play_by_play}
-        keyExtractor={(item, index) => `${item.batter}_${index}`}
-        renderItem={({ item }) => (
-          <View style={styles.playRow}>
-            <Image
-              source={require('../assets/app_logos/ballrae_logo_white.png')}
-              style={styles.playerImage}
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.batterName}>{item.batter} ({item.batting_hand})</Text>
-              {item.at_bat.map((p) => (
-                <Text key={p.pitch_num} style={styles.pitchText}>
-                  {p.pitch_num}구 {p.pitch}
-                </Text>
-              ))}
-              <Text style={styles.resultText}>⚾ {item.final_result.description}</Text>
-            </View>
+      {dummyInningPlay.play_by_play.map((item, index) => (
+        <View key={`${item.batter}_${index}`} style={styles.playRow}>
+          <Image
+            source={require('../assets/app_logos/ballrae_logo_white.png')}
+            style={styles.playerImage}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.batterName}>
+              {item.batter} ({item.batting_hand})
+            </Text>
+            {item.at_bat.map((p) => (
+              <Text key={p.pitch_num} style={styles.pitchText}>
+                {p.pitch_num}구 {p.pitch}
+              </Text>
+            ))}
+            <Text style={styles.resultText}>⚾ {item.final_result.description}</Text>
           </View>
-        )}
-      />
-    </View>
+        </View>
+      ))}
+    </ScrollView>
   );
 };
 
@@ -157,7 +162,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+   // paddingHorizontal:5,
+  },
+  scoreBoxFull: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginVertical: 12,
     paddingHorizontal: 16,
+  },
+  teamBlockContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   logo: {
     width: 40,
@@ -165,17 +181,10 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   teamBlock: {
-    alignItems: 'center',
     marginHorizontal: 6,
   },
   teamLabel: {
-    fontSize: 12,
-  },
-  scoreBoxFull: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    marginVertical: 12,
+    fontSize: 13,
   },
   scoreSet: {
     alignItems: 'center',
@@ -185,15 +194,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   score: {
-    fontSize: 24,
+    fontSize: 25,
     fontWeight: 'bold',
     marginHorizontal: 6,
   },
   vs: {
-    fontSize: 20,
+    fontSize: 25,
     fontWeight: 'bold',
-    marginLeft:5,
-    marginRight:5,
+    marginHorizontal: 10,
   },
   inningText: {
     fontSize: 14,
