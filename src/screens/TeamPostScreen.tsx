@@ -6,11 +6,13 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
 import Header from '../components/Header';
 import FlagIcon from '../assets/icons/flag_icon.svg';
+
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
+
 import { useIsFocused } from '@react-navigation/native';
 import { TouchableOpacity } from 'react-native';
 

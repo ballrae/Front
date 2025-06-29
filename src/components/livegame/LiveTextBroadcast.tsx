@@ -1,14 +1,31 @@
-// src/components/livegame/LiveTextBroadcast.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native';
 import { dummyInningPlayList } from '../../data/dummyInningPlay';
 import { pitchTypeColorMap } from '../../constants/pitchTypeColorMap';
 
 const LiveTextBroadcast = () => {
   const [selectedInning, setSelectedInning] = useState<number>(6);
+  const [inningData, setInningData] = useState<any | null>(null);
+  const [forceRender, setForceRender] = useState(false); // 👈 강제 렌더링 트리거
+
   const allInnings = Array.from({ length: 9 }, (_, i) => i + 1);
 
-  const inningData = dummyInningPlayList.find((data) => data.inning === selectedInning);
+  useEffect(() => {
+    const data = dummyInningPlayList.find((d) => d.inning === selectedInning);
+    setInningData(data ?? null);
+  }, [selectedInning]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setForceRender(true); // 💥 렌더 트리거
+    }, 100); // 100ms 후 실행
+
+    return () => clearTimeout(timeout);
+  }, []);
+
+  if (!forceRender) {
+    return null; // 초기 렌더 대기
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -35,7 +52,7 @@ const LiveTextBroadcast = () => {
       {!inningData ? (
         <Text style={styles.noticeText}>경기 중입니다.</Text>
       ) : (
-        inningData.play_by_play.map((play, index) => (
+        inningData.play_by_play.map((play: any, index: number) => (
           <View key={index} style={styles.playContainer}>
             <Image source={require('../../assets/dummy.png')} style={styles.avatar} />
             <View style={styles.infoBox}>
@@ -44,22 +61,42 @@ const LiveTextBroadcast = () => {
               </Text>
 
               <View style={styles.pitches}>
-                {play.at_bat.map((pitch, i) => {
+                {play.at_bat.map((pitch: any, i: number) => {
                   const isLast = i === play.at_bat.length - 1;
                   return (
                     <View key={i} style={styles.pitchRow}>
                       {/* 왼쪽: 투구 정보 */}
                       <View style={styles.leftColumn}>
-                        <View style={[styles.pitchCircle, { backgroundColor: pitchTypeColorMap[pitch.type as keyof typeof pitchTypeColorMap] }]}>
+                        <View
+                          style={[
+                            styles.pitchCircle,
+                            {
+                              backgroundColor:
+                                pitchTypeColorMap[pitch.type as keyof typeof pitchTypeColorMap],
+                            },
+                          ]}
+                        >
                           <Text style={styles.pitchCircleText}>{pitch.type}</Text>
                         </View>
-                        <Text style={styles.pitchText}>{`${pitch.pitch_num}구: ${pitch.pitch}`}</Text>
+                        <Text style={styles.pitchText}>
+                          {`${pitch.pitch_num}구: ${pitch.pitch}`}
+                        </Text>
                       </View>
 
                       {/* 오른쪽: 결과 */}
                       {isLast && (
                         <View style={styles.rightColumn}>
-                          <View style={[styles.pitchCircle, { backgroundColor: pitchTypeColorMap[play.final_result.code as keyof typeof pitchTypeColorMap] || '#ccc' }]}>
+                          <View
+                            style={[
+                              styles.pitchCircle,
+                              {
+                                backgroundColor:
+                                  pitchTypeColorMap[
+                                    play.final_result.code as keyof typeof pitchTypeColorMap
+                                  ] || '#ccc',
+                              },
+                            ]}
+                          >
                             <Text style={styles.pitchCircleText}>{play.final_result.code}</Text>
                           </View>
                           <Text style={styles.resultText}>{play.final_result.description}</Text>
@@ -98,7 +135,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginVertical: 20,
-    paddingLeft: 5, 
+    paddingLeft: 5,
   },
   inningTabText: {
     fontSize: 13,
@@ -111,7 +148,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     marginBottom: 12,
-     paddingLeft: 5, 
+    paddingLeft: 12,
   },
   noticeText: {
     fontSize: 16,
@@ -122,7 +159,7 @@ const styles = StyleSheet.create({
   playContainer: {
     flexDirection: 'row',
     marginBottom: 24,
-     paddingLeft: 5, 
+    paddingLeft: 5,
   },
   avatar: {
     width: 48,
@@ -159,8 +196,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    flexShrink: 0,        // ← 내용이 적다고 줄어들지 않도록
-    minWidth: 0,        // ← 오른쪽 영역 최소 너비 설정
+    flexShrink: 0,
+    minWidth: 0,
   },
   pitchCircle: {
     width: 18,
@@ -180,7 +217,7 @@ const styles = StyleSheet.create({
   },
   resultText: {
     fontSize: 11,
-     lineHeight: 20,
+    lineHeight: 20,
     fontWeight: '500',
     textAlign: 'left',
   },
