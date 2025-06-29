@@ -18,5 +18,8 @@ export type RootStackParamList = {
     homeTeamName: string;
     awayTeamName: string;
   };
+  ArchiveScreen: undefined;
+  PitcherDetailScreen: { playerId: string };
+  BatterDetailScreen: { playerId: string };
 };
 

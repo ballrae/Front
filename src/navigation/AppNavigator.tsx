@@ -12,6 +12,8 @@ import TeamPostScreen from '../screens/TeamPostScreen';
 import WritePostScreen from '../screens/WritePostScreen';
 import DetailPostScreen from '../screens/DetailPostScreen';
 import LiveGameScreen from '../screens/LiveGameScreen';
+import PitcherDetailScreen from '../screens/PitcherDetailScreen';
+import BatterDetailScreen from '../screens/BatterDetailScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
@@ -24,7 +26,12 @@ const AppNavigator = () => {
         <Stack.Screen name="TeamPostScreen" component={TeamPostScreen} />
         <Stack.Screen name="WritePostScreen" component={WritePostScreen} />
         <Stack.Screen name="DetailPostScreen" component={DetailPostScreen}/>
+
         <Stack.Screen name="LiveGameScreen" component={LiveGameScreen} />
+
+        <Stack.Screen name="PitcherDetailScreen" component={PitcherDetailScreen} />
+        <Stack.Screen name="BatterDetailScreen" component={BatterDetailScreen} />
+     
       </Stack.Navigator>
     </NavigationContainer>
   );

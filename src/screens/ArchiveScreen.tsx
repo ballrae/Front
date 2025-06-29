@@ -1,73 +1,20 @@
-// ArchiveScreen.tsx
+// src/screens/ArchiveScreen.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, FlatList, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import LogoHeader from '../components/LogoHeader';
 import SearchIcon from '../assets/icons/search.svg';
 import XIcon from '../assets/icons/X.svg';
 
-const ballraeLogo = require('../assets/app_logos/ballrae_logo_white.png');
-
-const dummyPlayerRecords = [
-  {
-    id: '1',
-    name: '양의지',
-    team: '두산 베어스',
-    position: '포수',
-    inning: '6.1',
-    strikeouts: 4,
-    image: ballraeLogo,
-  },
-  {
-    id: '2',
-    name: '송승기',
-    team: 'LG 트윈스',
-    position: '투수',
-    inning: '6.1',
-    strikeouts: 4,
-    image: ballraeLogo,
-  },
-  {
-    id: '3',
-    name: '송타자',
-    team: '두산 베어스',
-    position: '타자',
-    inning: '6.1',
-    strikeouts: 4,
-    image: ballraeLogo,
-  },
-  {
-    id: '4',
-    name: '안투수',
-    team: '두산 베어스',
-    position: '투수',
-    inning: '6.1',
-    strikeouts: 4,
-    image: ballraeLogo,
-  },
-  {
-    id: '5',
-    name: '장타자',
-    team: '두산 베어스',
-    position: '타자',
-    inning: '6.1',
-    strikeouts: 4,
-    image: ballraeLogo,
-  },
-    {
-    id: '6',
-    name: '김타자',
-    team: '두산 베어스',
-    position: '타자',
-    inning: '6.1',
-    strikeouts: 4,
-    image: ballraeLogo,
-  },
-];
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/RootStackParamList';
+import { pitcherDummy } from '../data/pitcherDummy';
 
 const ArchiveScreen = () => {
   const [search, setSearch] = useState('');
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const filteredPlayers = dummyPlayerRecords.filter(player =>
+  const filteredPlayers = pitcherDummy.filter(player =>
     player.name.includes(search)
   );
 
@@ -97,21 +44,24 @@ const ArchiveScreen = () => {
         data={filteredPlayers}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Image source={item.image} style={styles.avatar} />
-            <View style={styles.infoBox}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.team}>{item.team}</Text>
-              <View style={styles.statRow}>
-                <Text style={styles.statLabel}>이닝 </Text>
-                <Text style={styles.statValue}>{item.inning}</Text>
-                <Text style={styles.statDivider}>|</Text>
-                <Text style={styles.statLabel}>탈삼진 </Text>
-                <Text style={styles.statValue}>{item.strikeouts}</Text>
-                <Text style={styles.statDivider}>|</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('PitcherDetailScreen', { playerId: item.id })}
+          >
+            <View style={styles.card}>
+              <Image source={item.image} style={styles.avatar} />
+              <View style={styles.infoBox}>
+                <Text style={styles.name}>{item.name}</Text>
+                <Text style={styles.team}>{item.team}</Text>
+                <View style={styles.statRow}>
+                  <Text style={styles.statLabel}>이닝 </Text>
+                  <Text style={styles.statValue}>{item.IP}</Text>
+                  <Text style={styles.statDivider}>|</Text>
+                  <Text style={styles.statLabel}>탈삼진 </Text>
+                  <Text style={styles.statValue}>{item.SO}</Text>
+                </View>
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       />
     </View>
@@ -120,6 +70,7 @@ const ArchiveScreen = () => {
 
 export default ArchiveScreen;
 
+// 스타일은 그대로 유지
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -158,7 +109,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-    //borderBottomWidth: 1,
     borderColor: '#eee',
   },
   avatar: {
@@ -188,7 +138,6 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 13,
     color: '#999',
-    //fontWeight: 'bold',
   },
   statValue: {
     fontSize: 13,
