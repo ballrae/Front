@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import VerticalSlider from '../VerticalSlider';
 
 interface PitcherValueStatsProps {
   K9: number;
@@ -13,7 +14,7 @@ const getMarkerColor = (value: number) => {
   if (value >= 70) return '#408A21';
   if (value <= 30) return '#C7E0BC';
   return '#92C17D';
-}
+};
 
 const PitcherValueStats: React.FC<PitcherValueStatsProps> = ({
   K9,
@@ -50,8 +51,8 @@ const PitcherValueStats: React.FC<PitcherValueStatsProps> = ({
             </View>
           </View>
 
-          {/* 슬라이더 2개 */}
-          <View style={styles.sliderBox}>
+          {/* 슬라이더 2개 가로 정렬 */}
+          <View style={styles.sliderRow}>
             {[{ label: 'K/9%', value: K9_percentile }, { label: 'BB/9%', value: BB9_percentile }].map((item, idx) => (
               <View key={idx} style={styles.slider}>
                 <Text style={styles.sliderLabel}>{item.label}</Text>
@@ -73,8 +74,7 @@ const PitcherValueStats: React.FC<PitcherValueStatsProps> = ({
                         style={[
                           styles.markerText,
                           {
-                            color:
-                              getMarkerColor(item.value) === '#408A21' ? '#fff' : '#000',
+                            color: getMarkerColor(item.value) === '#408A21' ? '#fff' : '#000',
                           },
                         ]}
                       >
@@ -88,30 +88,10 @@ const PitcherValueStats: React.FC<PitcherValueStatsProps> = ({
           </View>
         </View>
 
-        {/* 오른쪽: 가치 */}
+        {/* 오른쪽: VerticalSlider 컴포넌트 사용 */}
         <View style={styles.rightBox}>
           <Text style={styles.subTitle}>가치</Text>
-          <View style={styles.verticalGraph}>
-            {/* 선 */}
-            <View style={styles.fullLine} />
-            {/* 점 */}
-            <View style={[styles.dot, { top: 0 }]} />
-            <View style={[styles.dot, { top: '50%' }]} />
-            <View style={[styles.dot, { bottom: 0 }]} />
-            {/* 마커 */}
-            <View
-              style={[
-                styles.markerVertical,
-                {
-                  top: `${100 - RAA_percentile}%`,
-                },
-              ]}
-            >
-              <Text style={styles.markerTextWhite}>{RAA_percentile}</Text>
-            </View>
-          </View>
-            {/* 라벨 */}
-            <Text style={styles.sliderLabel}>종합RAA%</Text>
+          <VerticalSlider value={RAA_percentile} label="종합RAA%" />
         </View>
       </View>
     </View>
@@ -170,9 +150,9 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: 'bold',
   },
-  sliderBox: {
+
+  sliderRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: 12,
   },
@@ -219,52 +199,5 @@ const styles = StyleSheet.create({
   markerText: {
     fontSize: 8,
     fontWeight: 'bold',
-  },
-  // 🎯 가치 세로 그래프
-  verticalGraph: {
-    height: 140,
-    width: 60,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    position: 'relative',
-    marginTop: 8,
-  },
-  fullLine: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 1.3,
-    backgroundColor: '#000',
-    left: '50%',
-    transform: [{ translateX: -1 }],
-    zIndex: 1,
-    
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#000',
-    position: 'absolute',
-    left: '50%',
-    transform: [{ translateX: -3 }],
-    zIndex: 2,
-  },
-  markerVertical: {
-    position: 'absolute',
-    left: '50%',
-    transform: [{ translateX: -12 }],
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#408A21',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 5,
-  },
-  markerTextWhite: {
-    color: '#fff',
-   // fontWeight: 'bold',
-    fontSize: 11,
   },
 });

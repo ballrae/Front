@@ -1,44 +1,37 @@
-// src/components/archive/pitcher/PitcherBasicStats.tsx
+// src/components/archive/batter/BatterBasicStats.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import PercentileSlider from '../PercentileSlider';
 
-interface PitcherBasicStatsProps {
+interface BatterBasicStatsProps {
   G: number;
-  W: number;
-  L: number;
-  S: number;
-  IP: number;
-  SO: number;
-  ERA: number;
-  FIP: number;
-  WHIP: number;
-  WAR: number;
   AVG: number;
-  W_percentile: number;
-  L_percentile: number;
-  SO_percentile: number;
-  ERA_percentile: number;
-  FIP_percentile: number;
-  WHIP_percentile: number;
+  WAR: number;
+  wRC: number;
+  OBP: number;
+  SLG: number;
+  OPS: number;
+  HR: number;
   WAR_percentile: number;
-  AVG_percentile: number;
+  wRC_percentile: number;
+  OBP_percentile: number;
+  SLG_percentile: number;
+  OPS_percentile: number;
+  HR_percentile: number;
 }
 
-const PitcherBasicStats: React.FC<PitcherBasicStatsProps> = (props) => {
+const BatterBasicStats: React.FC<BatterBasicStatsProps> = (props) => {
   const percentileData = [
-    { label: 'W%', value: props.W_percentile },
-    { label: 'L%', value: props.L_percentile },
-    { label: 'SO%', value: props.SO_percentile },
-    { label: 'ERA%', value: props.ERA_percentile },
-    { label: 'FIP%', value: props.FIP_percentile },
-    { label: 'WHIP%', value: props.WHIP_percentile },
     { label: 'WAR%', value: props.WAR_percentile },
-    { label: 'AVG%', value: props.AVG_percentile },
+    { label: 'wRC+%', value: props.wRC_percentile },
+    { label: 'OBP%', value: props.OBP_percentile },
+    { label: 'SLG%', value: props.SLG_percentile },
+    { label: 'OPS%', value: props.OPS_percentile },
+    { label: 'HR%', value: props.HR_percentile },
   ];
 
-  const statKeys = ['G', 'W', 'L', 'S', 'IP', 'SO', 'ERA', 'FIP', 'WHIP', 'WAR', 'AVG'];
-  const statValues = [props.G, props.W, props.L, props.S, props.IP, props.SO, props.ERA, props.FIP, props.WHIP, props.WAR, props.AVG];
+  const statKeys = ['G', 'AVG', 'WAR', 'wRC+', 'OBP', 'SLG', 'OPS', 'HR'];
+  const statValues = [props.G, props.AVG, props.WAR, props.wRC, props.OBP, props.SLG, props.OPS, props.HR];
 
   return (
     <View style={styles.container}>
@@ -88,7 +81,7 @@ const PitcherBasicStats: React.FC<PitcherBasicStatsProps> = (props) => {
   );
 };
 
-export default PitcherBasicStats;
+export default BatterBasicStats;
 
 const styles = StyleSheet.create({
   container: {
