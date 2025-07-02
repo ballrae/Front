@@ -13,16 +13,16 @@ import { useNavigation } from '@react-navigation/native';
 import axiosInstance from '../utils/axiosInstance'; // ✅ axiosInstance 사용
 
 const teams = [
-  { id: 'OB', logo: require('../assets/team_logos/ob_logo.png') },
-  { id: 'LT', logo: require('../assets/team_logos/lt_logo.png') },
-  { id: 'SS', logo: require('../assets/team_logos/ss_logo.png') },
-  { id: 'WO', logo: require('../assets/team_logos/wo_logo.png') },
-  { id: 'HH', logo: require('../assets/team_logos/hh_logo.png') },
-  { id: 'HT', logo: require('../assets/team_logos/ht_logo.png') },
-  { id: 'KT', logo: require('../assets/team_logos/kt_logo.png') },
-  { id: 'LG', logo: require('../assets/team_logos/lg_logo.png') },
-  { id: 'NC', logo: require('../assets/team_logos/nc_logo.png') },
-  { id: 'SK', logo: require('../assets/team_logos/sk_logo.png') },
+  { id: 'DS', logo: require('../assets/team_logos/ds_logo.png') }, // 두산 베어스
+  { id: 'LT', logo: require('../assets/team_logos/lt_logo.png') }, // 롯데 자이언츠
+  { id: 'SS', logo: require('../assets/team_logos/ss_logo.png') }, // 삼성 라이온즈
+  { id: 'HE', logo: require('../assets/team_logos/he_logo.png') }, // 키움 히어로즈
+  { id: 'HH', logo: require('../assets/team_logos/hh_logo.png') }, // 한화 이글스
+  { id: 'KA', logo: require('../assets/team_logos/ka_logo.png') }, // KIA 타이거즈
+  { id: 'KT', logo: require('../assets/team_logos/kt_logo.png') }, // KT 위즈
+  { id: 'LG', logo: require('../assets/team_logos/lg_logo.png') }, // LG 트윈스
+  { id: 'NC', logo: require('../assets/team_logos/nc_logo.png') }, // NC 다이노스
+  { id: 'SL', logo: require('../assets/team_logos/sl_logo.png') }, // SSG 랜더스
 ];
 
 const MyTeamScreen = () => {

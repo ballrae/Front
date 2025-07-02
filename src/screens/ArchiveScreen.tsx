@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, FlatList, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
+
 import LogoHeader from '../components/LogoHeader';
 import SearchIcon from '../assets/icons/search.svg';
 import XIcon from '../assets/icons/X.svg';
@@ -10,12 +19,23 @@ import { RootStackParamList } from '../navigation/RootStackParamList';
 import { pitcherDummy } from '../data/pitcherDummy';
 import { batterDummy } from '../data/batterDummy';
 
+type PitcherType = typeof pitcherDummy[number] & { type: 'pitcher' };
+type BatterType = typeof batterDummy[number] & { type: 'batter' };
+type MergedPlayer = PitcherType | BatterType;
+
 const ArchiveScreen = () => {
   const [search, setSearch] = useState('');
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const filteredPitchers = pitcherDummy.filter(player => player.name.includes(search));
-  const filteredBatters = batterDummy.filter(player => player.name.includes(search));
+  const filteredPitchers: PitcherType[] = pitcherDummy
+    .filter(player => player.name.includes(search))
+    .map(player => ({ ...player, type: 'pitcher' } as const));
+
+  const filteredBatters: BatterType[] = batterDummy
+    .filter(player => player.name.includes(search))
+    .map(player => ({ ...player, type: 'batter' } as const));
+
+  const mergedData: MergedPlayer[] = [...filteredPitchers, ...filteredBatters];
 
   return (
     <View style={styles.container}>
@@ -40,12 +60,12 @@ const ArchiveScreen = () => {
       </View>
 
       <FlatList
-        data={[...filteredPitchers, ...filteredBatters]}
-        keyExtractor={item => item.id.toString()}
+        data={mergedData}
+        keyExtractor={(item) => `${item.type}-${item.id}`} // ✅ key 중복 방지
         renderItem={({ item }) => (
           <TouchableOpacity
             onPress={() => {
-              if ('IP' in item) {
+              if (item.type === 'pitcher') {
                 navigation.navigate('PitcherDetailScreen', { playerId: item.id });
               } else {
                 navigation.navigate('BatterDetailScreen', { playerId: item.id });
@@ -55,10 +75,10 @@ const ArchiveScreen = () => {
             <View style={styles.card}>
               <Image source={item.image} style={styles.avatar} />
               <View style={styles.infoBox}>
-                <Text style={styles.name}>{item.name || item.name}</Text>
+                <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.team}>{item.team}</Text>
                 <View style={styles.statRow}>
-                  {'IP' in item ? (
+                  {item.type === 'pitcher' ? (
                     <>
                       <Text style={styles.statLabel}>이닝 </Text>
                       <Text style={styles.statValue}>{item.IP}</Text>
