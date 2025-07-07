@@ -20,6 +20,16 @@
 
 ---
 
+## 👩🏻‍💻 프로젝트 내용
+
+- 영상 없이도 몰입감 있는 야구 관람 경험을 제공하는 **인터랙티브 중계 앱**
+- **실시간 문자 중계, 스트라이크존 시각화, 선수 기록, 팀별 커뮤니티** 등 팬덤 중심 기능 통합
+- React Native 기반의 **iOS/Android 크로스 플랫폼 앱 개발**, 프론트엔드 전반 담당
+- Swift/Kotlin으로 플랫폼별 네이티브 기능 연동 (예: iOS Live Activity, 키보드 처리 등)
+- 백엔드는 Django + PostgreSQL 기반 RESTful API, Kafka 기반 중계 데이터 실시간 수집 자동화
+
+---
+
 ## 💡 주요 구현 기능
 
 ### 로그인 및 마이팀 설정
@@ -65,9 +75,12 @@
 
 
 ---
+## 👥 팀 구성
 
-## 🔗 관련 링크
+| 이름       | 역할                                                                 | GitHub 프로필                                 |
+|------------|----------------------------------------------------------------------|------------------------------------------------|
+| **안지희** | Frontend / iOS/Android 앱 개발, 커뮤니티 구현, API 연동, 욕설 필터링 적용 | [@Anjihee](https://github.com/Anjihee)         |
+| **송유빈** | Backend / 실시간 중계 데이터 수집 (크롤링, Kafka, Airflow 등)             | [@11yubin](https://github.com/11yubin)         |
+| **장혜지** | PM / 기획 총괄, UI 흐름 설계, 일정 관리, 커뮤니케이션 리딩                 | [@JangHyeji-Belle](https://github.com/JangHyeji-Belle) |
 
-- 🔗 [ballrae 조직 페이지](https://github.com/ballrae)
-- 🔗 [Backend Repository](https://github.com/ballrae/Back)
-- 📬 Contact: jihee5100@sookmyung.ac.kr
+
