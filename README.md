@@ -1,10 +1,9 @@
 # ⚾️ 볼래? | 인터랙티브 야구 중계 앱
 
-볼래? (Ball래?)는 야구 팬을 위한 실시간 인터랙티브 중계 앱입니다.  
+볼래? (Ball래?)는 야구 팬을 위한 실시간 인터랙티브 중계 APP입니다.  
 문자 중계, 스트라이크존 시각화, 선수 기록실, 커뮤니티 기능 등을 통해 영상 없이도 몰입감 있는 야구 관람 경험을 제공합니다.
 
-프론트엔드는 **React Native** 기반으로 개발되었으며, **iOS/Android 크로스 플랫폼**을 동시에 대응합니다.
-
+**React Native** 기반으로 개발되었으며, **iOS/Android 크로스 플랫폼**을 동시에 지원합니다.
 
 
 📍 **프로젝트 기간**
@@ -23,9 +22,9 @@
 ## 👩🏻‍💻 프로젝트 내용
 
 - 영상 없이도 몰입감 있는 야구 관람 경험을 제공하는 **인터랙티브 중계 앱**
-- **실시간 문자 중계, 스트라이크존 시각화, 선수 기록, 팀별 커뮤니티** 등 팬덤 중심 기능 통합
-- React Native 기반의 **iOS/Android 크로스 플랫폼 앱 개발**, 프론트엔드 전반 담당
-- Swift/Kotlin으로 플랫폼별 네이티브 기능 연동 (예: iOS Live Activity, 키보드 처리 등)
+- **실시간 문자 중계, 스트라이크존 시각화, 선수 기록, 팀별 커뮤니티** 등 분산된 야구 관람 기능을 하나로 모아 제공
+- React Native 기반의 **iOS/Android 크로스 플랫폼 앱 개발**
+- Swift/Kotlin으로 플랫폼별 네이티브 기능 연동 (iOS Live Activity, Android widget)
 - 백엔드는 Django + PostgreSQL 기반 RESTful API, Kafka 기반 중계 데이터 실시간 수집 자동화
 
 ---
@@ -75,12 +74,17 @@
 
 
 ---
-## 👥 팀 구성
+### 👥 팀 구성
 
 | 이름       | 역할                                                                 | GitHub 프로필                                 |
 |------------|----------------------------------------------------------------------|------------------------------------------------|
-| **안지희** | Frontend / iOS/Android 앱 개발, 커뮤니티 구현, API 연동, 욕설 필터링 적용 | [@Anjihee](https://github.com/Anjihee)         |
-| **송유빈** | Backend / 실시간 중계 데이터 수집 (크롤링, Kafka, Airflow 등)             | [@11yubin](https://github.com/11yubin)         |
-| **장혜지** | PM / 기획 총괄, UI 흐름 설계, 일정 관리, 커뮤니케이션 리딩                 | [@JangHyeji-Belle](https://github.com/JangHyeji-Belle) |
+| **안지희** | Frontend 전담 / 커뮤니티, 기록실, 중계 UI 등 전체 화면 설계 및 구현<br>Backend 일부 참여 / 카카오 로그인, 게시판 API, 욕설 필터링 모델 연동 | [@Anjihee](https://github.com/Anjihee)         |
+| **송유빈** | Backend 전담 / 실시간 중계 데이터 수집 및 처리 (크롤링, Kafka, Airflow 등), API 구조 설계 | [@11yubin](https://github.com/11yubin)         |
+| **장혜지** | PM / 전체 기획, 서비스 구조 설계, 일정 관리 및 커뮤니케이션 리딩                 | [@JangHyeji-Belle](https://github.com/JangHyeji-Belle) |
 
+---
 
+## 📫 Contact
+
+- ✉️ Email: jihee5100@sookmyung.ac.kr  
+- 🐙 GitHub: [Anjihee](https://github.com/Anjihee)
