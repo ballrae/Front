@@ -1,97 +1,73 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# ⚾️ 볼래? | 인터랙티브 야구 중계 앱
 
-# Getting Started
+볼래? (Ball래?)는 야구 팬을 위한 실시간 인터랙티브 중계 앱입니다.  
+문자 중계, 스트라이크존 시각화, 선수 기록실, 커뮤니티 기능 등을 통해 영상 없이도 몰입감 있는 야구 관람 경험을 제공합니다.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+프론트엔드는 **React Native** 기반으로 개발되었으며, **iOS/Android 크로스 플랫폼**을 동시에 대응합니다.
 
-## Step 1: Start Metro
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+📍 **프로젝트 기간**
 
-```sh
-# Using npm
-npm start
+2025.03.02 ~ 현재
 
-# OR using Yarn
-yarn start
-```
 
-## Step 2: Build and run your app
+📍 **사용 스택**
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+- **Mobile**: `React Native` `React Native CLI` `TypeScript` `Swift` `Kotlin`
+- **Backend**: `Django` `RESTful API` `PostgreSQL`
+- **Infrastructure**: `Docker` `Apache Kafka` `Airflow`
 
-### Android
+---
 
-```sh
-# Using npm
-npm run android
+## 💡 주요 구현 기능
 
-# OR using Yarn
-yarn android
-```
+### 로그인 및 마이팀 설정
+- 카카오 로그인 연동으로 간편한 인증
+- 로그인 후 10개 구단 중 마이팀 선택 → 앱 전체에 팀 정보 반영
+- 팀 선택 시 하이라이트 처리 및 변경 확인 메시지 출력
+<img width="3669" alt="step1" src="https://github.com/user-attachments/assets/4e18cb40-37fd-4860-9757-0d590d5fa1f3" />
 
-### iOS
+---
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+### 문자 중계 및 실시간 경기
+- 최근 경기 리스트 제공 → 클릭 시 실시간 중계 화면 이동
+- 스트라이크존, 주자 위치, 투수 정보 시각화
+- 회차별 문자 중계: 구종/구속/결과 출력
+- 현재 더미 기반이며, 추후 실시간 크롤링 연동 예정
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+<img width="3669" alt="step2" src="https://github.com/user-attachments/assets/3ea97a97-b782-4ea4-8b64-bd9e84faf807" />
 
-```sh
-bundle install
-```
+---
 
-Then, and every time you update your native dependencies, run:
+### 기록실 (투수/타자 별)
+- 전체 선수 검색 기능 제공
+- 투수/타자 포지션에 따라 다른 지표와 레이아웃 표시
+- 기본/심화/가치 스탯을 나눠 시각화
+- 수평 슬라이더 & 레이더 차트 기반 시각 요소 구성
+<img width="3669" alt="step3" src="https://github.com/user-attachments/assets/ae491593-6c4c-415d-9240-613c02e6797e" />
 
-```sh
-bundle exec pod install
-```
+---
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+### 팀별 커뮤니티 게시판
+- 10개 구단별 전용 게시판 제공
+- 게시글 목록/작성 기능, 이미지 첨부 지원
+- 게시판별 날짜별 정렬 기능
+<img width="3670" alt="step4" src="https://github.com/user-attachments/assets/6e583dca-3dc2-4b95-b9ed-a99459217d7c" />
 
-```sh
-# Using npm
-npm run ios
+---
 
-# OR using Yarn
-yarn ios
-```
+### 댓글 및 욕설 필터링
+- 댓글/좋아요 기능 포함, 실시간 반영
+- 욕설 필터링 모델 연동 → 비속어 마스킹 처리
+- 클린한 커뮤니티 환경을 위한 UX 개선
+<img width="3670" alt="step5" src="https://github.com/user-attachments/assets/649f3949-aa81-4014-82f0-9ed38859dab6" />
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+---
 
-## Step 3: Modify your app
+## 🔗 관련 링크
 
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+- 🔗 [ballrae 조직 페이지](https://github.com/ballrae)
+- 🔗 [Backend Repository](https://github.com/ballrae/Back)
+- 📬 Contact: jihee5100@sookmyung.ac.kr
