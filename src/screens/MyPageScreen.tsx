@@ -69,6 +69,7 @@ const MyPageScreen = () => {
 
       await AsyncStorage.setItem('accessToken', access);
       await AsyncStorage.setItem('refreshToken', refresh);
+      console.log('👉 Django JWT access token:', access);
 
       // 로그인 이후 유저 정보 불러오기
       await fetchUserInfo();

@@ -11,7 +11,7 @@ import PlayerHeader from '../components/archive/PlayerHeader';
 import BatterBasicStats from '../components/archive/batter/BatterBasicStats';
 import BatterAdvancedStats from '../components/archive/batter/BatterAdvancedStats';
 import BatterValueStats from '../components/archive/batter/BatterValueStats';
-
+import GroundHeatMap from '../components/archive/batter/GroundHeatMap'; // 히트맵 컴포넌트 import
 // (필요 시 아래에 BatterBasicStats, BatterValueStats 등 추가)
 
 type BatterRouteProp = RouteProp<RootStackParamList, 'BatterDetailScreen'>;
@@ -49,6 +49,8 @@ const BatterDetailScreen = () => {
         position={batter.position}
         image={batter.image}
       />
+      <GroundHeatMap />
+
       {/* 기본 */}
       <BatterBasicStats
         G={batter.G}

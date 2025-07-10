@@ -12,9 +12,9 @@ const dummyData = {
     runs: 4,
     hits: 6,
     pitchDetail: '87 (S 49 + B 38)',
-    seasonStats: ['10', '5', '3', '0', '57.1', '55', '20', '2.83'],
-    careerStats: ['18', '5', '4', '0', '66.2', '65', '27', '3.11'],
     pitchTypes: '슬라이더\n체인지업',
+    seasonStats: ['10', '57.1', '5', '3', '2.83'],
+    careerStats: ['18', '66.2', '5', '4', '3.11'],
   },
   batter: {
     name: '양의지',
@@ -40,7 +40,6 @@ const dummyData = {
 
 const PitcherBatterInfo = () => {
   const { pitcher, batter } = dummyData;
-
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>투타정보</Text>
@@ -54,15 +53,19 @@ const PitcherBatterInfo = () => {
             <Text style={styles.playerSubInfo}>{pitcher.hand}  No. {pitcher.number}</Text>
           </View>
           <Text style={styles.pitchCount}>{pitcher.pitchCount}구</Text>
-          <Text style={styles.statLine}>이닝 <Text style={styles.statValue}>{pitcher.inning}</Text>  |  탈삼진 <Text style={styles.statValue}>{pitcher.strikeouts}</Text>  |  실점 <Text style={styles.statValue}>{pitcher.runs}</Text></Text>
-          <Text style={styles.statLine}>피안타 <Text style={styles.statValue}>{pitcher.hits}</Text>  |  투구수 <Text style={styles.statValue}>{pitcher.pitchDetail}</Text></Text>
+          <Text style={styles.statLine}>이닝 <Text style={styles.statValue}>{pitcher.inning}</Text> | 탈삼진 <Text style={styles.statValue}>{pitcher.strikeouts}</Text> | 실점 <Text style={styles.statValue}>{pitcher.runs}</Text></Text>
+          <Text style={styles.statLine}>피안타 <Text style={styles.statValue}>{pitcher.hits}</Text> | 투구수 <Text style={styles.statValue}>{pitcher.pitchDetail}</Text></Text>
+        </View>
+        <View style={styles.extraBox}>
+          <Text style={styles.extraTitle}>예상 구종</Text>
+          <Text style={styles.extraContent}>{pitcher.pitchTypes}</Text>
         </View>
       </View>
 
       <StatsTable
-        headers={['성적', '경기', '승', '패', '세이브', '이닝', '삼진', '볼넷', '평균자책점', '예상구종']}
+        headers={['성적', '경기', '이닝', '승', '패', '평균자책점']}
         rows={[
-          ['시즌', ...pitcher.seasonStats, pitcher.pitchTypes],
+          ['시즌', ...pitcher.seasonStats],
           ['통산', ...pitcher.careerStats],
         ]}
       />
@@ -79,12 +82,16 @@ const PitcherBatterInfo = () => {
           <Text style={styles.statLine}>타석 {batter.detail.plate} | 타수 {batter.detail.at_bat} | 안타 {batter.detail.hits} | 득점 {batter.detail.score}</Text>
           <Text style={styles.statLine}>타점 {batter.detail.rbi} | 홈런 {batter.detail.hr} | 볼넷 {batter.detail.bb} | 삼진 {batter.detail.so}</Text>
         </View>
+        <View style={styles.extraBox}>
+          <Text style={styles.extraTitle}>예상 타구</Text>
+          <Text style={styles.extraContent}>{batter.battedBall}</Text>
+        </View>
       </View>
 
       <StatsTable
-        headers={['성적', '타수', '안타', '홈런', '타점', '출루율', '타율', '예상 타구방향']}
+        headers={['성적', '타수', '안타', '홈런', '타점', '출루율', '타율']}
         rows={[
-          ['시즌', ...batter.seasonStats, batter.battedBall],
+          ['시즌', ...batter.seasonStats],
           ['통산', ...batter.careerStats],
         ]}
       />
@@ -99,7 +106,7 @@ const StatsTable = ({ headers, rows }: { headers: string[]; rows: string[][] }) 
         <View style={styles.tableRow}>
           {headers.map((h, i) => (
             <View key={i} style={[styles.cellWrapper, styles.headerCell, i === headers.length - 1 && styles.lastCell]}>
-              <Text style={[styles.cellText, styles.headerText]}>{h}</Text>
+              <Text style={[styles.cellText, styles.headerText]} numberOfLines={2}>{h}</Text>
             </View>
           ))}
         </View>
@@ -108,13 +115,9 @@ const StatsTable = ({ headers, rows }: { headers: string[]; rows: string[][] }) 
             {row.map((cell, ci) => (
               <View
                 key={ci}
-                style={[
-                  styles.cellWrapper,
-                  ci === 0 && styles.leftCell,
-                  ci === row.length - 1 && styles.lastCell,
-                  ri === 1 && ci === row.length - 1 && styles.emptyBottomCell
-                ]}>
-                <Text style={styles.cellText}>{cell}</Text>
+                style={[styles.cellWrapper, ci === 0 && styles.leftCell, ci === row.length - 1 && styles.lastCell]}
+              >
+                <Text style={styles.cellText} numberOfLines={1} adjustsFontSizeToFit>{cell}</Text>
               </View>
             ))}
           </View>
@@ -128,7 +131,7 @@ export default PitcherBatterInfo;
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16
+    paddingHorizontal: 16,
   },
   title: {
     fontSize: 20,
@@ -142,10 +145,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   playerImage: {
-    width: 80,
-    height: 80,
+    width: 75,
+    height: 75,
     resizeMode: 'contain',
-    marginRight: 12,
+    marginRight: 10,
   },
   infoBox: {
     flex: 1,
@@ -156,27 +159,52 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   playerName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '500',
     marginRight: 8,
+    marginBottom: 8,
   },
   playerSubInfo: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#555',
+    marginBottom: 8,
   },
   pitchCount: {
-    fontSize: 15,
+    fontSize: 13,
     color: '#575757',
-    marginBottom: 4,
+    marginBottom: 10,
   },
   statLine: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#A5A5A5',
     marginBottom: 2,
   },
   statValue: {
     fontWeight: '600',
     color: '#A5A5A5',
+  },
+  extraBox: {
+    backgroundColor: '#e6f4e5',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    maxWidth: 80,
+  },
+  extraTitle: {
+    fontWeight: 'bold',
+    fontSize: 13,
+    color: '#2E7D32',
+    textAlign: 'center',
+  },
+  extraContent: {
+    fontSize: 13,
+    color: '#2E7D32',
+    marginTop: 4,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   tableWrapper: {
     marginBottom: 35,
@@ -192,8 +220,8 @@ const styles = StyleSheet.create({
   },
   cellWrapper: {
     minWidth: 65,
-    minHeight: 35, 
-    paddingHorizontal: 4,
+    minHeight: 35,
+    paddingHorizontal: 6,
     borderRightWidth: 1,
     borderRightColor: '#ccc',
     justifyContent: 'center',
@@ -204,6 +232,7 @@ const styles = StyleSheet.create({
     color: '#2E7D32',
     textAlign: 'center',
     lineHeight: 16,
+    includeFontPadding: false,
   },
   headerCell: {
     backgroundColor: '#d8ebd3',
@@ -216,11 +245,5 @@ const styles = StyleSheet.create({
   },
   lastCell: {
     borderRightWidth: 0,
-  },
-  emptyBottomCell: {
-    borderLeftWidth: 0,
-    borderRightWidth: 1,
-    borderBottomWidth: 0,
-    borderColor: '#ccc',
   },
 });
