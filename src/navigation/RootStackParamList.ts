@@ -21,5 +21,6 @@ export type RootStackParamList = {
   ArchiveScreen: undefined;
   PitcherDetailScreen: { playerId: string };
   BatterDetailScreen: { playerId: string };
+  SettingsScreen: { type: 'broadcast' | 'alarm' };
 };
 

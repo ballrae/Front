@@ -14,6 +14,8 @@ import DetailPostScreen from '../screens/DetailPostScreen';
 import LiveGameScreen from '../screens/LiveGameScreen';
 import PitcherDetailScreen from '../screens/PitcherDetailScreen';
 import BatterDetailScreen from '../screens/BatterDetailScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
@@ -31,7 +33,7 @@ const AppNavigator = () => {
 
         <Stack.Screen name="PitcherDetailScreen" component={PitcherDetailScreen} />
         <Stack.Screen name="BatterDetailScreen" component={BatterDetailScreen} />
-     
+        <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

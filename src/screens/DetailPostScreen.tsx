@@ -60,39 +60,47 @@ const DetailPostScreen = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchPostAndComments = async () => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem('accessToken');
+  console.time('🟡 fetchPostAndComments 전체');
+  try {
+    setLoading(true);
 
-      const [postRes, commentsRes] = await Promise.all([
-        axiosInstance.get(`/api/posts/${teamId}/${postId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axiosInstance.get(`/api/posts/${teamId}/${postId}/comments/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+    const token = await AsyncStorage.getItem('accessToken');
 
-      const postData = postRes.data.data;
+    console.time('🟢 게시글, 댓글 동시 요청');
+    const [postRes, commentsRes] = await Promise.all([
+      axiosInstance.get(`/api/posts/${teamId}/${postId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      axiosInstance.get(`/api/posts/${teamId}/${postId}/comments/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ]);
+    console.timeEnd('🟢 게시글, 댓글 동시 요청');
 
-      const liked = await AsyncStorage.getItem('likedPosts');
-      const likedIds: number[] = liked ? JSON.parse(liked) : [];
+    const postData = postRes.data.data;
 
-      const storedImageUri = await AsyncStorage.getItem(`postImage-${postData.postId}`);
-      postData.imageUri = storedImageUri;
+    console.time('🔵 AsyncStorage 처리');
+    const liked = await AsyncStorage.getItem('likedPosts');
+    const likedIds: number[] = liked ? JSON.parse(liked) : [];
 
-      if (likedIds.includes(postData.postId)) {
-        postData.isLiked = true;
-      }
+    const storedImageUri = await AsyncStorage.getItem(`postImage-${postData.postId}`);
+    postData.imageUri = storedImageUri;
+    console.timeEnd('🔵 AsyncStorage 처리');
 
-      setPost(postData);
-      setComments(commentsRes.data.data);
-    } catch (err) {
-      Alert.alert('불러오기 실패', '게시글 또는 댓글 데이터를 가져오지 못했습니다.');
-    } finally {
-      setLoading(false);
+    if (likedIds.includes(postData.postId)) {
+      postData.isLiked = true;
     }
-  };
+
+    setPost(postData);
+    setComments(commentsRes.data.data);
+  } catch (err) {
+    Alert.alert('불러오기 실패', '게시글 또는 댓글 데이터를 가져오지 못했습니다.');
+  } finally {
+    setLoading(false);
+    console.timeEnd('🟡 fetchPostAndComments 전체');
+  }
+};
+
 
   const toggleLike = async () => {
     try {
@@ -131,10 +139,11 @@ const DetailPostScreen = () => {
 
   useEffect(() => {
     if (isFocused) {
+      console.time('🟢 DetailPostScreen 진입 → fetchPostAndComments');
       fetchPostAndComments();
     }
   }, [isFocused]);
-
+  
   if (loading || !post) {
     return <ActivityIndicator size="large" style={{ marginTop: 50 }} />;
   }

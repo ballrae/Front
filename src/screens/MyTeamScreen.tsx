@@ -10,20 +10,10 @@ import {
 } from 'react-native';
 import Header from '../components/Header';
 import { useNavigation } from '@react-navigation/native';
-import axiosInstance from '../utils/axiosInstance'; // ✅ axiosInstance 사용
+import axiosInstance from '../utils/axiosInstance';
+import teamLogoMap from '../constants/teamLogos';
 
-const teams = [
-  { id: 'DS', logo: require('../assets/team_logos/ds_logo.png') }, // 두산 베어스
-  { id: 'LT', logo: require('../assets/team_logos/lt_logo.png') }, // 롯데 자이언츠
-  { id: 'SS', logo: require('../assets/team_logos/ss_logo.png') }, // 삼성 라이온즈
-  { id: 'HE', logo: require('../assets/team_logos/he_logo.png') }, // 키움 히어로즈
-  { id: 'HH', logo: require('../assets/team_logos/hh_logo.png') }, // 한화 이글스
-  { id: 'KA', logo: require('../assets/team_logos/ka_logo.png') }, // KIA 타이거즈
-  { id: 'KT', logo: require('../assets/team_logos/kt_logo.png') }, // KT 위즈
-  { id: 'LG', logo: require('../assets/team_logos/lg_logo.png') }, // LG 트윈스
-  { id: 'NC', logo: require('../assets/team_logos/nc_logo.png') }, // NC 다이노스
-  { id: 'SL', logo: require('../assets/team_logos/sl_logo.png') }, // SSG 랜더스
-];
+const teams = Object.entries(teamLogoMap).map(([id, logo]) => ({ id, logo }));
 
 const MyTeamScreen = () => {
   const navigation = useNavigation();
@@ -62,23 +52,24 @@ const MyTeamScreen = () => {
 
   return (
     <View style={styles.container}>
-<FlatList
-  ListHeaderComponent={
-    <Header
-      title="마이팀 설정"
-      showBackButton
-      onBackPress={() => navigation.goBack()}
-      showCompleteButton
-      onCompletePress={handleComplete}
-    />
-  }
-  data={teams}
-  keyExtractor={(item) => item.id}
-  renderItem={renderItem}
-  numColumns={2}
-  // padding을 헤더 포함 전체가 아니라 리스트 항목에만 적용
-  contentContainerStyle={styles.listOnlyContent}
-/>
+      <FlatList
+        ListHeaderComponent={
+          <View style={{ marginHorizontal: -20 }}>
+            <Header
+              title="마이팀 설정"
+              showBackButton
+              onBackPress={() => navigation.goBack()}
+              showCompleteButton
+              onCompletePress={handleComplete}
+            />
+          </View>
+        }
+        data={teams}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        numColumns={2}
+        contentContainerStyle={styles.listOnlyContent}
+      />
     </View>
   );
 };
@@ -89,9 +80,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  headerWrapper: {
-    paddingHorizontal: 0,
   },
   listOnlyContent: {
     paddingHorizontal: 20,

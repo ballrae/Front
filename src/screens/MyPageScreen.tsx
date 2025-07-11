@@ -10,7 +10,6 @@ import { RootStackParamList } from '../navigation/RootStackParamList';
 import Header from '../components/Header';
 import KakaoButtonIcon from '../assets/kakao_btn.svg';
 import teamLogoMap from '../constants/teamLogos';
-
 import { login } from '@react-native-seoul/kakao-login';
 
 const MyPageScreen = () => {
@@ -55,14 +54,11 @@ const MyPageScreen = () => {
       const token = await login();
       console.log('Kakao access token:', token.accessToken);
 
-    const res = await axiosInstance.post('/api/users/kakao/', {
-    access_token: token.accessToken,
+      const res = await axiosInstance.post('/api/users/kakao/', {
+        access_token: token.accessToken,
       });
 
-      // ✅ 응답에서 정확한 위치로 접근
       const { access, refresh } = res.data.data.tokens;
-
-      // 예외 처리 추가
       if (!access || !refresh) {
         throw new Error('JWT 토큰이 응답에 포함되지 않았습니다.');
       }
@@ -71,12 +67,32 @@ const MyPageScreen = () => {
       await AsyncStorage.setItem('refreshToken', refresh);
       console.log('👉 Django JWT access token:', access);
 
-      // 로그인 이후 유저 정보 불러오기
       await fetchUserInfo();
     } catch (err) {
       console.error('카카오 로그인 실패:', err);
       Alert.alert('로그인 실패', '카카오 로그인 중 문제가 발생했습니다.');
     }
+  };
+
+  const handleLogout = () => {
+    Alert.alert('로그아웃', '정말 로그아웃 하시겠어요?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '확인',
+        onPress: async () => {
+          await AsyncStorage.removeItem('accessToken');
+          await AsyncStorage.removeItem('refreshToken');
+          setIsLoggedIn(false);
+          setUserNickname('');
+          setTeamName('');
+          setTeamId('');
+        },
+      },
+    ]);
+  };
+
+  const goToSetting = (type: 'broadcast' | 'alarm') => {
+    navigation.navigate('SettingsScreen', { type });
   };
 
   useEffect(() => {
@@ -92,25 +108,49 @@ const MyPageScreen = () => {
   return (
     <View style={styles.container}>
       <Header title="마이" showBackButton={false} />
-      {!isLoggedIn ? (
-        <View style={styles.loginBox}>
-          <Image source={require('../assets/app_logos/ballrae_logo_white.png')} style={styles.logo} />
-          <View style={styles.loginTextBox}>
-            <Text style={styles.text}>로그인을 해 주세요.</Text>
-            <TouchableOpacity style={styles.kakaoBtnWrapper} onPress={handleKakaoLogin}>
-              <KakaoButtonIcon width={160} height={42} />
-            </TouchableOpacity>
-          </View>
+
+      <View style={styles.loginBox}>
+        <Image source={teamLogoSource} style={styles.logo} />
+        <View style={styles.loginTextBox}>
+          {!isLoggedIn ? (
+            <>
+              <Text style={styles.text}>로그인을 해 주세요.</Text>
+              <TouchableOpacity style={styles.kakaoBtnWrapper} onPress={handleKakaoLogin}>
+                <KakaoButtonIcon width={160} height={42} />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.text}>{userNickname}</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('MyTeamScreen')}>
+                <Text style={styles.subText}>{teamName || '마이팀 설정'}</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </View>
+
+      {/* 설정 항목 */}
+      {isLoggedIn ? (
+        <View style={[styles.menuBox, styles.menuGroupTop]}>
+          <TouchableOpacity style={styles.item} onPress={() => navigation.navigate('MyTeamScreen')}>
+            <Text style={styles.menuText}>마이팀 설정</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.item} onPress={() => goToSetting('broadcast')}>
+            <Text style={styles.menuText}>중계실 설정</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.item} onPress={() => goToSetting('alarm')}>
+            <Text style={styles.menuText}>알림 설정</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.item, styles.noBorder]} onPress={handleLogout}>
+            <Text style={[styles.menuText, styles.logout]}>로그아웃</Text>
+          </TouchableOpacity>
         </View>
       ) : (
-        <View style={styles.loginBox}>
-          <Image source={teamLogoSource} style={styles.logo} />
-          <View style={styles.loginTextBox}>
-            <Text style={styles.text}>{userNickname}</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('MyTeamScreen')}>
-              <Text style={styles.subText}>{teamName || '마이팀 설정'}</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={[styles.menuBox, styles.menuGroupTop]}>
+          <TouchableOpacity style={styles.item} onPress={() => goToSetting('broadcast')}>
+            <Text style={styles.menuText}>중계실 설정</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -128,6 +168,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
+    marginBottom: 20,
   },
   logo: {
     width: 80,
@@ -151,5 +192,27 @@ const styles = StyleSheet.create({
   },
   kakaoBtnWrapper: {
     alignSelf: 'flex-start',
+  },
+  menuBox: {
+    marginTop: 5,
+  },
+  menuGroupTop: {
+    borderTopWidth: 1,
+    borderTopColor: '#ccc',
+  },
+  item: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+  },
+  noBorder: {
+    borderBottomWidth: 0,
+  },
+  menuText: {
+    fontSize: 16,
+  },
+  logout: {
+    color: 'gray',
   },
 });
