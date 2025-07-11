@@ -1,78 +1,60 @@
-// src/components/archive/pitcher/PitcherBasicStats.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import PercentileSlider from '../PercentileSlider';
 
-interface PitcherBasicStatsProps {
-  G: number;
-  W: number;
-  L: number;
-  S: number;
-  IP: number;
-  SO: number;
-  ERA: number;
-  FIP: number;
-  WHIP: number;
-  WAR: number;
-  AVG: number;
-  W_percentile: number;
-  L_percentile: number;
-  SO_percentile: number;
-  ERA_percentile: number;
-  FIP_percentile: number;
-  WHIP_percentile: number;
-  WAR_percentile: number;
-  AVG_percentile: number;
+interface BatterAdvancedStatsProps {
+  BABIP: number;
+  IsoP: number;
+  BBK: number;
+  BABIP_percentile: number;
+  IsoP_percentile: number;
+  BBK_percentile: number;
+  HR_percentile: number;
 }
 
-const PitcherBasicStats: React.FC<PitcherBasicStatsProps> = (props) => {
-  const percentileData = [
-    { label: 'W%', value: props.W_percentile },
-    { label: 'L%', value: props.L_percentile },
-    { label: 'SO%', value: props.SO_percentile },
-    { label: 'ERA%', value: props.ERA_percentile },
-    { label: 'FIP%', value: props.FIP_percentile },
-    { label: 'WHIP%', value: props.WHIP_percentile },
-    { label: 'WAR%', value: props.WAR_percentile },
-    { label: 'AVG%', value: props.AVG_percentile },
-  ];
+const BatterAdvancedStats: React.FC<BatterAdvancedStatsProps> = (props) => {
+  const statLabels = ['BABIP', 'IsoP', 'BB/K'];
+  const statValues = [props.BABIP, props.IsoP, props.BBK];
 
-  const statKeys = ['G', 'W', 'L', 'S', 'IP', 'SO', 'ERA', 'FIP', 'WHIP', 'WAR', 'AVG'];
-  const statValues = [props.G, props.W, props.L, props.S, props.IP, props.SO, props.ERA, props.FIP, props.WHIP, props.WAR, props.AVG];
+  const percentileData = [
+    { label: 'BABIP%', value: props.BABIP_percentile },
+    { label: 'IsoP%', value: props.IsoP_percentile },
+    { label: 'HR%', value: props.HR_percentile },
+  ];
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>기본</Text>
+      <Text style={styles.sectionTitle}>심화</Text>
 
       <View style={styles.table}>
         <View style={styles.rowHeader}>
-          {statKeys.map((h, i) => (
+          {statLabels.map((label, index) => (
             <View
-              key={i}
+              key={index}
               style={[
                 styles.cell,
                 styles.headerCell,
-                i === statKeys.length - 1 && { borderRightWidth: 0 },
+                index === statLabels.length - 1 && { borderRightWidth: 0 },
               ]}
             >
-              <Text style={styles.headerText}>{h}</Text>
+              <Text style={styles.headerText}>{label}</Text>
             </View>
           ))}
         </View>
         <View style={styles.rowData}>
-          {statValues.map((v, i) => (
+          {statValues.map((value, index) => (
             <View
-              key={i}
+              key={index}
               style={[
                 styles.cell,
                 styles.dataCell,
-                i === statValues.length - 1 && { borderRightWidth: 0 },
+                index === statValues.length - 1 && { borderRightWidth: 0 },
               ]}
             >
               <Text style={styles.dataText}>
-                {typeof v === 'number'
-                  ? v.toFixed(3).replace(/\.0+$/, '').replace(/\.([1-9]*)0+$/, '.$1')
-                  : v}
+                {typeof value === 'number'
+                  ? value.toFixed(3).replace(/\.0+$/, '').replace(/\.([1-9]*)0+$/, '.$1')
+                  : value}
               </Text>
             </View>
           ))}
@@ -88,7 +70,7 @@ const PitcherBasicStats: React.FC<PitcherBasicStatsProps> = (props) => {
   );
 };
 
-export default PitcherBasicStats;
+export default BatterAdvancedStats;
 
 const styles = StyleSheet.create({
   container: {
@@ -101,8 +83,9 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   table: {
-    flexDirection: 'column',
-    marginBottom: 16,
+    width: 120,
+   flexDirection: 'column',
+   marginBottom: 20,
   },
   rowHeader: {
     flexDirection: 'row',
@@ -112,14 +95,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#d0e6c4',
   },
-  cell: {
-    flex: 1,
+    cell: {
+    width: 40,  // 명확히 지정
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 6,
     borderRightWidth: 0.5,
     borderColor: '#aaa',
-  },
+    },
   headerCell: {
     borderBottomWidth: 0.5,
   },

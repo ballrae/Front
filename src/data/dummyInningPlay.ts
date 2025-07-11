@@ -6,9 +6,9 @@ export const dummyInningPlayList = [
         batter: '양석환',
         batting_hand: '좌타',
         at_bat: [
-          { pitch_num: 1, type: 'S', pitch: '직구 → 헛스윙' },
-          { pitch_num: 2, type: 'B', pitch: '체인지업' },
-          { pitch_num: 3, type: 'S', pitch: '직구' },
+          { pitch_num: 1, type: 'S', pitch: '직구 → 헛스윙', velocity: 145 },
+          { pitch_num: 2, type: 'B', pitch: '체인지업', velocity: 132 },
+          { pitch_num: 3, type: 'S', pitch: '직구', velocity: 146 },
         ],
         final_result: {
           code: 'H',
@@ -19,10 +19,10 @@ export const dummyInningPlayList = [
         batter: '강승호',
         batting_hand: '우타',
         at_bat: [
-          { pitch_num: 1, type: 'S', pitch: '직구' },
-          { pitch_num: 2, type: 'B', pitch: '직구' },
-          { pitch_num: 3, type: 'S', pitch: '스플리터' },
-          { pitch_num: 4, type: 'S', pitch: '직구' },
+          { pitch_num: 1, type: 'S', pitch: '직구', velocity: 147 },
+          { pitch_num: 2, type: 'B', pitch: '직구', velocity: 146 },
+          { pitch_num: 3, type: 'S', pitch: '스플리터', velocity: 136 },
+          { pitch_num: 4, type: 'S', pitch: '직구', velocity: 148 },
         ],
         final_result: {
           code: 'K',
@@ -33,8 +33,8 @@ export const dummyInningPlayList = [
         batter: '양의지',
         batting_hand: '우타',
         at_bat: [
-          { pitch_num: 1, type: 'S', pitch: '직구' },
-          { pitch_num: 2, type: 'B', pitch: '체인지업' },
+          { pitch_num: 1, type: 'S', pitch: '직구', velocity: 145 },
+          { pitch_num: 2, type: 'B', pitch: '체인지업', velocity: 131 },
         ],
         final_result: {
           code: 'G',
@@ -50,8 +50,8 @@ export const dummyInningPlayList = [
         batter: '홍길동',
         batting_hand: '좌타',
         at_bat: [
-          { pitch_num: 1, type: 'S', pitch: '슬라이더' },
-          { pitch_num: 2, type: 'S', pitch: '직구' },
+          { pitch_num: 1, type: 'S', pitch: '슬라이더', velocity: 139 },
+          { pitch_num: 2, type: 'S', pitch: '직구', velocity: 146 },
         ],
         final_result: {
           code: 'F',
@@ -62,9 +62,9 @@ export const dummyInningPlayList = [
         batter: '이정후',
         batting_hand: '좌타',
         at_bat: [
-          { pitch_num: 1, type: 'B', pitch: '커브' },
-          { pitch_num: 2, type: 'S', pitch: '직구' },
-          { pitch_num: 3, type: 'S', pitch: '슬라이더' },
+          { pitch_num: 1, type: 'B', pitch: '커브', velocity: 128 },
+          { pitch_num: 2, type: 'S', pitch: '직구', velocity: 145 },
+          { pitch_num: 3, type: 'S', pitch: '슬라이더', velocity: 138 },
         ],
         final_result: {
           code: 'K',
@@ -75,11 +75,11 @@ export const dummyInningPlayList = [
         batter: '박건우',
         batting_hand: '우타',
         at_bat: [
-          { pitch_num: 1, type: 'S', pitch: '직구' },
-          { pitch_num: 2, type: 'B', pitch: '체인지업' },
-          { pitch_num: 3, type: 'B', pitch: '슬라이더' },
-          { pitch_num: 4, type: 'S', pitch: '직구' },
-          { pitch_num: 5, type: 'B', pitch: '커터' },
+          { pitch_num: 1, type: 'S', pitch: '직구', velocity: 147 },
+          { pitch_num: 2, type: 'B', pitch: '체인지업', velocity: 133 },
+          { pitch_num: 3, type: 'B', pitch: '슬라이더', velocity: 139 },
+          { pitch_num: 4, type: 'S', pitch: '직구', velocity: 148 },
+          { pitch_num: 5, type: 'B', pitch: '커터', velocity: 141 },
         ],
         final_result: {
           code: 'W',

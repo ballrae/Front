@@ -79,7 +79,8 @@ const LiveTextBroadcast = () => {
                           <Text style={styles.pitchCircleText}>{pitch.type}</Text>
                         </View>
                         <Text style={styles.pitchText}>
-                          {`${pitch.pitch_num}구: ${pitch.pitch}`}
+                          {`${pitch.pitch_num}구: ${pitch.pitch} `}
+                          <Text style={styles.velocityText}>{`${pitch.velocity}km/h`}</Text>
                         </Text>
                       </View>
 
@@ -184,7 +185,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 4,
+    marginBottom: 5,
   },
   leftColumn: {
     flex: 1,
@@ -198,6 +199,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     flexShrink: 0,
     minWidth: 0,
+    marginLeft: 40
   },
   pitchCircle: {
     width: 18,
@@ -217,8 +219,12 @@ const styles = StyleSheet.create({
   },
   resultText: {
     fontSize: 11,
-    lineHeight: 20,
+    lineHeight: 18,
     fontWeight: '500',
     textAlign: 'left',
   },
+  velocityText: {
+  fontSize: 10,
+  color: '#888',
+},
 });

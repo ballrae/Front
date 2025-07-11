@@ -1,15 +1,15 @@
 // teamIdMap.ts
 const teamNameToId: { [key: string]: string } = {
-  '한화': 'HH',
-  '두산': 'OB',
-  'KT': 'KT',
-  'LG': 'LG',
-  'KIA': 'HT',
+  '두산': 'DS',
   '롯데': 'LT',
   '삼성': 'SS',
-  '키움': 'WO',
+  '키움': 'HE',
+  '한화': 'HH',
+  'KIA': 'KA',
+  'KT': 'KT',
+  'LG': 'LG',
   'NC': 'NC',
-  'SSG': 'SK',
+  'SSG': 'SL',
 };
 
 export default teamNameToId;

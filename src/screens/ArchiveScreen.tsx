@@ -1,6 +1,14 @@
-// src/screens/ArchiveScreen.tsx
 import React, { useState } from 'react';
-import { View, Text, TextInput, FlatList, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
+
 import LogoHeader from '../components/LogoHeader';
 import SearchIcon from '../assets/icons/search.svg';
 import XIcon from '../assets/icons/X.svg';
@@ -9,14 +17,25 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 import { pitcherDummy } from '../data/pitcherDummy';
+import { batterDummy } from '../data/batterDummy';
+
+type PitcherType = typeof pitcherDummy[number] & { type: 'pitcher' };
+type BatterType = typeof batterDummy[number] & { type: 'batter' };
+type MergedPlayer = PitcherType | BatterType;
 
 const ArchiveScreen = () => {
   const [search, setSearch] = useState('');
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const filteredPlayers = pitcherDummy.filter(player =>
-    player.name.includes(search)
-  );
+  const filteredPitchers: PitcherType[] = pitcherDummy
+    .filter(player => player.name.includes(search))
+    .map(player => ({ ...player, type: 'pitcher' } as const));
+
+  const filteredBatters: BatterType[] = batterDummy
+    .filter(player => player.name.includes(search))
+    .map(player => ({ ...player, type: 'batter' } as const));
+
+  const mergedData: MergedPlayer[] = [...filteredPitchers, ...filteredBatters];
 
   return (
     <View style={styles.container}>
@@ -41,11 +60,17 @@ const ArchiveScreen = () => {
       </View>
 
       <FlatList
-        data={filteredPlayers}
-        keyExtractor={item => item.id}
+        data={mergedData}
+        keyExtractor={(item) => `${item.type}-${item.id}`} // ✅ key 중복 방지
         renderItem={({ item }) => (
           <TouchableOpacity
-            onPress={() => navigation.navigate('PitcherDetailScreen', { playerId: item.id })}
+            onPress={() => {
+              if (item.type === 'pitcher') {
+                navigation.navigate('PitcherDetailScreen', { playerId: item.id });
+              } else {
+                navigation.navigate('BatterDetailScreen', { playerId: item.id });
+              }
+            }}
           >
             <View style={styles.card}>
               <Image source={item.image} style={styles.avatar} />
@@ -53,11 +78,23 @@ const ArchiveScreen = () => {
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.team}>{item.team}</Text>
                 <View style={styles.statRow}>
-                  <Text style={styles.statLabel}>이닝 </Text>
-                  <Text style={styles.statValue}>{item.IP}</Text>
-                  <Text style={styles.statDivider}>|</Text>
-                  <Text style={styles.statLabel}>탈삼진 </Text>
-                  <Text style={styles.statValue}>{item.SO}</Text>
+                  {item.type === 'pitcher' ? (
+                    <>
+                      <Text style={styles.statLabel}>이닝 </Text>
+                      <Text style={styles.statValue}>{item.IP}</Text>
+                      <Text style={styles.statDivider}>|</Text>
+                      <Text style={styles.statLabel}>탈삼진 </Text>
+                      <Text style={styles.statValue}>{item.SO}</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.statLabel}>타율 </Text>
+                      <Text style={styles.statValue}>{item.AVG}</Text>
+                      <Text style={styles.statDivider}>|</Text>
+                      <Text style={styles.statLabel}>홈런 </Text>
+                      <Text style={styles.statValue}>{item.HR}</Text>
+                    </>
+                  )}
                 </View>
               </View>
             </View>
@@ -70,7 +107,6 @@ const ArchiveScreen = () => {
 
 export default ArchiveScreen;
 
-// 스타일은 그대로 유지
 const styles = StyleSheet.create({
   container: {
     flex: 1,

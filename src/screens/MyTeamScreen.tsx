@@ -10,20 +10,10 @@ import {
 } from 'react-native';
 import Header from '../components/Header';
 import { useNavigation } from '@react-navigation/native';
-import axiosInstance from '../utils/axiosInstance'; // ✅ axiosInstance 사용
+import axiosInstance from '../utils/axiosInstance';
+import teamLogoMap from '../constants/teamLogos';
 
-const teams = [
-  { id: 'OB', logo: require('../assets/team_logos/ob_logo.png') },
-  { id: 'LT', logo: require('../assets/team_logos/lt_logo.png') },
-  { id: 'SS', logo: require('../assets/team_logos/ss_logo.png') },
-  { id: 'WO', logo: require('../assets/team_logos/wo_logo.png') },
-  { id: 'HH', logo: require('../assets/team_logos/hh_logo.png') },
-  { id: 'HT', logo: require('../assets/team_logos/ht_logo.png') },
-  { id: 'KT', logo: require('../assets/team_logos/kt_logo.png') },
-  { id: 'LG', logo: require('../assets/team_logos/lg_logo.png') },
-  { id: 'NC', logo: require('../assets/team_logos/nc_logo.png') },
-  { id: 'SK', logo: require('../assets/team_logos/sk_logo.png') },
-];
+const teams = Object.entries(teamLogoMap).map(([id, logo]) => ({ id, logo }));
 
 const MyTeamScreen = () => {
   const navigation = useNavigation();
@@ -62,23 +52,24 @@ const MyTeamScreen = () => {
 
   return (
     <View style={styles.container}>
-<FlatList
-  ListHeaderComponent={
-    <Header
-      title="마이팀 설정"
-      showBackButton
-      onBackPress={() => navigation.goBack()}
-      showCompleteButton
-      onCompletePress={handleComplete}
-    />
-  }
-  data={teams}
-  keyExtractor={(item) => item.id}
-  renderItem={renderItem}
-  numColumns={2}
-  // padding을 헤더 포함 전체가 아니라 리스트 항목에만 적용
-  contentContainerStyle={styles.listOnlyContent}
-/>
+      <FlatList
+        ListHeaderComponent={
+          <View style={{ marginHorizontal: -20 }}>
+            <Header
+              title="마이팀 설정"
+              showBackButton
+              onBackPress={() => navigation.goBack()}
+              showCompleteButton
+              onCompletePress={handleComplete}
+            />
+          </View>
+        }
+        data={teams}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        numColumns={2}
+        contentContainerStyle={styles.listOnlyContent}
+      />
     </View>
   );
 };
@@ -89,9 +80,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  headerWrapper: {
-    paddingHorizontal: 0,
   },
   listOnlyContent: {
     paddingHorizontal: 20,

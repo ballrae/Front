@@ -17,6 +17,8 @@ import Header from '../components/Header';
 import axiosInstance from '../utils/axiosInstance';
 import { launchImageLibrary } from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect } from 'react';
+
 
 import CameraIcon from '../assets/icons/camera.svg'; // svg 아이콘
 
@@ -33,39 +35,47 @@ const WritePostScreen = () => {
     navigation.goBack();
   };
 
-  const handleSubmit = async () => {
-    if (!title.trim() || !content.trim()) {
-      Alert.alert('알림', '제목과 내용을 모두 입력해주세요.');
-      return;
-    }
+const handleSubmit = async () => {
+  console.time('🟡 handleSubmit 전체');
 
-    try {
-      const response = await axiosInstance.post('/api/posts/create/', {
-        team: teamId,
-        post_title: title,
-        post_content: content,
-        is_pinned: false,
-      });
+  if (!title.trim() || !content.trim()) {
+    Alert.alert('알림', '제목과 내용을 모두 입력해주세요.');
+    return;
+  }
 
-      if (response.status === 201) {
-        const postId = response.data.data.postId;
+  try {
+    console.time('🟢 POST 요청');
+    const response = await axiosInstance.post('/api/posts/create/', {
+      team: teamId,
+      post_title: title,
+      post_content: content,
+      is_pinned: false,
+    });
+    console.timeEnd('🟢 POST 요청');
 
-        // ✅ postId로 이미지 URI 저장
-        if (imageUri) {
-          const key = `postImage-${postId}`;
-          await AsyncStorage.setItem(key, imageUri);
-        }
+    if (response.status === 201) {
+      const postId = response.data.data.postId;
 
-        Alert.alert('성공', '게시글이 등록되었습니다.');
-        navigation.goBack();
-      } else {
-        Alert.alert('실패', '등록 중 문제가 발생했습니다.');
+      if (imageUri) {
+        console.time('🔵 이미지 URI 저장');
+        await AsyncStorage.setItem(`postImage-${postId}`, imageUri);
+        console.timeEnd('🔵 이미지 URI 저장');
       }
-    } catch (error) {
-      console.error(error);
-      Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+
+      Alert.alert('성공', '게시글이 등록되었습니다.');
+
+      console.time('🟣 goBack');
+      navigation.goBack(); // 여기 이후 TeamPostScreen 으로 이동
+      console.timeEnd('🟣 goBack');
     }
-  };
+  } catch (error) {
+    console.error(error);
+    Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+  }
+
+  console.timeEnd('🟡 handleSubmit 전체');
+};
+
 
   const openImagePicker = async () => {
     const result = await launchImageLibrary({

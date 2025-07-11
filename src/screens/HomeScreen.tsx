@@ -20,7 +20,7 @@ const dummyGames = [
   {
     id: '1',
     homeTeam: 'LG',
-    awayTeam: 'OB',
+    awayTeam: 'DS',
     homeTeamName: 'LG 트윈스',
     awayTeamName: '두산 베어스',
     homeScore: 1,
@@ -30,8 +30,8 @@ const dummyGames = [
   },
   {
     id: '2',
-    homeTeam: 'HT',
-    awayTeam: 'WO',
+    homeTeam: 'KA',
+    awayTeam: 'HE',
     homeTeamName: 'KIA 타이거즈',
     awayTeamName: '키움 히어로즈',
     homeScore: 13,
@@ -41,7 +41,7 @@ const dummyGames = [
   },
   {
     id: '3',
-    homeTeam: 'SK',
+    homeTeam: 'SL',
     awayTeam: 'LT',
     homeTeamName: 'SSG 랜더스',
     awayTeamName: '롯데 자이언츠',
