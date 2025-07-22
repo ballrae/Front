@@ -19,6 +19,8 @@ import { RootStackParamList } from '../navigation/RootStackParamList';
 import { pitcherDummy } from '../data/pitcherDummy';
 import { batterDummy } from '../data/batterDummy';
 
+import FadeInView from '../components/FadeInView';
+
 type PitcherType = typeof pitcherDummy[number] & { type: 'pitcher' };
 type BatterType = typeof batterDummy[number] & { type: 'batter' };
 type MergedPlayer = PitcherType | BatterType;
@@ -38,7 +40,7 @@ const ArchiveScreen = () => {
   const mergedData: MergedPlayer[] = [...filteredPitchers, ...filteredBatters];
 
   return (
-    <View style={styles.container}>
+    <FadeInView style={styles.container}>
       <LogoHeader title="기록실" />
 
       <View style={styles.searchContainer}>
@@ -101,7 +103,7 @@ const ArchiveScreen = () => {
           </TouchableOpacity>
         )}
       />
-    </View>
+    </FadeInView>
   );
 };
 

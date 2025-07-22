@@ -8,11 +8,15 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
+
 import teamLogoMap from '../constants/teamLogos';
 import LogoHeader from '../components/LogoHeader';
+
+import FadeInView from '../components/FadeInView';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList, 'PostScreen'>;
 
@@ -76,7 +80,7 @@ const PostScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <FadeInView style={styles.container}>
       <FlatList
         data={teams}
         keyExtractor={(item) => item.id}
@@ -84,7 +88,7 @@ const PostScreen = () => {
         contentContainerStyle={styles.list}
         ListHeaderComponent={<LogoHeader title="게시판" />}
       />
-    </View>
+    </FadeInView>
   );
 };
 

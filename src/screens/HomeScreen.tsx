@@ -16,6 +16,9 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 
+// 탭바 렌더링
+import FadeInView from '../components/FadeInView';
+
 const dummyGames = [
   {
     id: '1',
@@ -84,7 +87,7 @@ const HomeScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'LiveGameScreen'>>();
 
   return (
-    <View style={styles.container}>
+    <FadeInView style={styles.container}>
       <LogoHeader title="최근 경기" />
       <FlatList
         data={dummyGames}
@@ -141,7 +144,7 @@ const HomeScreen = () => {
           </TouchableOpacity>
         )}
       />
-    </View>
+    </FadeInView>
   );
 };
 
