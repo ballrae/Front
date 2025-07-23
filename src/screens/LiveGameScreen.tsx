@@ -26,51 +26,55 @@ const innings = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 const LiveGameScreen = () => {
   const route = useRoute<RouteProp<RootStackParamList, 'LiveGameScreen'>>();
   const navigation = useNavigation();
-  const { gameId, homeTeamName, awayTeamName } = route.params;
+  const { gameId, homeTeamName, awayTeamName, homeScore, awayScore } = route.params;
   const homeTeamId = teamNameToId[homeTeamName.split(' ')[0]];
   const awayTeamId = teamNameToId[awayTeamName.split(' ')[0]];
 
-  const [selectedInning, setSelectedInning] = useState(6);
+  const [selectedInning, setSelectedInning] = useState(1);
 
   return (
     <ScrollView style={styles.container}>
       <View>
         <Header
-          title={`${homeTeamName.split(' ')[0]} vs ${awayTeamName.split(' ')[0]}`}
+          title={` ${awayTeamName.split(' ')[0]} vs ${homeTeamName.split(' ')[0]}`}
           showBackButton
           onBackPress={() => navigation.goBack()}
         />
       </View>
 
-      <View style={{ marginHorizontal: -16 }}>
+      <View style={{ marginHorizontal: -18 }}>
         <FieldStatusBoard />
       </View>
 
       {/* 스코어 */}
       <View style={styles.scoreBoxFull}>
         <View style={styles.teamBlockContainer}>
-          <Image source={teamLogoMap[homeTeamId]} style={styles.logo} />
+          <Image source={teamLogoMap[awayTeamId]} style={styles.logo} />
           <View style={[styles.teamBlock, { alignItems: 'flex-start' }]}>
-            <Text style={styles.teamLabel}>{homeTeamName.split(' ')[0]}</Text>
-            <Text style={styles.teamLabel}>{homeTeamName.split(' ')[1]}</Text>
+            <Text style={styles.teamLabel}>{awayTeamName.split(' ')[0]}</Text>
+            <Text style={styles.teamLabel}>{awayTeamName.split(' ')[1]}</Text>
           </View>
         </View>
 
         <View style={styles.scoreSet}>
           <Text style={styles.inningText}>{selectedInning}회</Text>
-          <View style={styles.scoreNumbers}>
-            <Text style={styles.score}>1</Text>
-            <Text style={styles.vs}>vs</Text>
-            <Text style={styles.score}>4</Text>
-          </View>
+         <View style={styles.scoreNumbers}>
+          <Text style={styles.score}>
+            {awayScore !== null ? awayScore : '0'}
+          </Text>
+          <Text style={styles.vs}>vs</Text>
+          <Text style={styles.score}>
+            {homeScore !== null ? homeScore : '0'}
+          </Text>
+        </View>
         </View>
 
         <View style={styles.teamBlockContainer}>
           <View style={[styles.teamBlock, { alignItems: 'flex-end' }]}>
-            <Text style={styles.teamLabel}>{awayTeamName.split(' ')[0]}</Text>
-            <Text style={styles.teamLabel}>{awayTeamName.split(' ')[1]}</Text>
+            <Text style={styles.teamLabel}>{homeTeamName.split(' ')[0]}</Text>
+            <Text style={styles.teamLabel}>{homeTeamName.split(' ')[1]}</Text>
           </View>
-          <Image source={teamLogoMap[awayTeamId]} style={styles.logo} />
+          <Image source={teamLogoMap[homeTeamId]} style={styles.logo} />
         </View>
       </View>
 
@@ -80,12 +84,12 @@ const LiveGameScreen = () => {
       </View>
 
         <View style={{ marginBottom: 24 }}>
-          <LiveTextBroadcast />
-        </View>
-
-
-
-      
+         <LiveTextBroadcast
+            gameId={gameId}
+            selectedInning={selectedInning}
+            setSelectedInning={setSelectedInning}
+            />
+        </View>      
     </ScrollView>
   );
 };

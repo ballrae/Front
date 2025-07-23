@@ -94,6 +94,8 @@ const HomeScreen = () => {
               gameId: item.id,
               homeTeamName: item.homeTeamName,
               awayTeamName: item.awayTeamName,
+              homeScore:item.homeScore ?? 0,
+              awayScore:item.awayScore ?? 0
             })}
           >
             <View style={styles.row}>

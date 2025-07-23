@@ -55,8 +55,8 @@ const StrikeZoneBox = ({
   const mapY = (y: number) => ((viewTop - y) / viewHeight) * height;
 
   // 스트존 위치 및 크기
-  const ZONE_WIDTH = width * 0.65;
-  const ZONE_HEIGHT = height * 0.65;
+  const ZONE_WIDTH = width * 0.60;
+  const ZONE_HEIGHT = height * 0.60;
   const ZONE_LEFT = (width - ZONE_WIDTH) / 2;
   const ZONE_TOP = (height - ZONE_HEIGHT) / 2;
   const cellW = ZONE_WIDTH / 3;
@@ -154,8 +154,8 @@ const StrikeZoneBox = ({
               position: 'absolute',
               left: px - 8,
               top: py - 8,
-              width: 18,
-              height: 18,
+              width: 15,
+              height: 15,
               borderRadius: 8,
               backgroundColor: getPitchColor(pitch.pitchResult),
               justifyContent: 'center',
