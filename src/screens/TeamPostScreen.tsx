@@ -5,17 +5,18 @@ import {
   FlatList,
   StyleSheet,
   ActivityIndicator,
+  TouchableOpacity,
+  Alert,
 } from 'react-native';
+
 import Header from '../components/Header';
 import FlagIcon from '../assets/icons/flag_icon.svg';
 
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 
-import { useIsFocused } from '@react-navigation/native';
-import { TouchableOpacity } from 'react-native';
-
+import axiosInstance from '../utils/axiosInstance';
 
 interface Post {
   postId: number;
@@ -31,15 +32,15 @@ const TeamPostsScreen = () => {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [canWrite, setCanWrite] = useState(true); // ✅ 글쓰기 제한 상태
 
   const isFocused = useIsFocused();
 
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/posts/${teamId}/`);
-        const json = await res.json();
-        setPosts(json.data);
+        const res = await axiosInstance.get(`/api/posts/${teamId}/`);
+        setPosts(res.data.data);
       } catch (e) {
         console.error('게시글 불러오기 실패:', e);
       } finally {
@@ -57,6 +58,24 @@ const TeamPostsScreen = () => {
     return dateOnly.replace(/-/g, '.');
   };
 
+  // ✅ 글쓰기 버튼 제한 함수
+  const onWritePress = () => {
+    if (!canWrite) {
+      Alert.alert(
+        '잠시만요!',
+        '20초 이내에 다시 글을 작성할 수 없습니다.',
+        [{ text: '확인' }]
+      );
+      return;
+    }
+
+    setCanWrite(false); // 20초 동안 비활성화
+    navigation.navigate('WritePostScreen', { teamId, teamName });
+
+    setTimeout(() => {
+      setCanWrite(true);
+    }, 30000); // 20초
+  };
 
   const renderPost = ({ item }: { item: Post }) => (
     <TouchableOpacity
@@ -65,11 +84,13 @@ const TeamPostsScreen = () => {
         item.isPinned && styles.pinnedBackground,
         item.isPinned && styles.pinnedBorder,
       ]}
-      onPress={() => navigation.navigate('DetailPostScreen', {
-        teamId,
-        teamName,
-        postId: item.postId,
-      })}
+      onPress={() =>
+        navigation.navigate('DetailPostScreen', {
+          teamId,
+          teamName,
+          postId: item.postId,
+        })
+      }
     >
       <View style={styles.leftSection}>
         {item.isPinned && (
@@ -98,9 +119,7 @@ const TeamPostsScreen = () => {
         showBackButton
         onBackPress={() => navigation.goBack()}
         showWriteButton
-        onWritePress={() =>
-          navigation.navigate('WritePostScreen', { teamId, teamName })
-        }
+        onWritePress={onWritePress} // ✅ 제한된 글쓰기 버튼
       />
       <FlatList
         data={posts}

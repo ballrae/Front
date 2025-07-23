@@ -4,13 +4,22 @@ import {
 } from 'react-native';
 import axiosInstance from '../utils/axiosInstance';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { login } from '@react-native-seoul/kakao-login';
+
+// 네비게이션
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
+
+// 탭바 렌더링
+import FadeInView from '../components/FadeInView';
+
+// 기타
 import Header from '../components/Header';
 import KakaoButtonIcon from '../assets/kakao_btn.svg';
 import teamLogoMap from '../constants/teamLogos';
-import { login } from '@react-native-seoul/kakao-login';
+
+
 
 const MyPageScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -106,7 +115,7 @@ const MyPageScreen = () => {
     : require('../assets/app_logos/ballrae_logo_white.png');
 
   return (
-    <View style={styles.container}>
+    <FadeInView style={styles.container}>
       <Header title="마이" showBackButton={false} />
 
       <View style={styles.loginBox}>
@@ -153,7 +162,7 @@ const MyPageScreen = () => {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </FadeInView>
   );
 };
 
