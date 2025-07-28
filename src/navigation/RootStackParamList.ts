@@ -19,10 +19,11 @@ export type RootStackParamList = {
     awayTeamName: string;
     homeScore:number;
     awayScore:number;
+    status: 'live' | 'done' | 'scheduled';
   };
   ArchiveScreen: undefined;
-  PitcherDetailScreen: { playerId: string };
-  BatterDetailScreen: { playerId: string };
+  PitcherDetailScreen: { playerId: number };
+  BatterDetailScreen: { playerId: number };
   SettingsScreen: { type: 'broadcast' | 'alarm' };
 };
 

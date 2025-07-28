@@ -17,6 +17,7 @@ type LiveTextBroadcastProps = {
   selectedInning: number;
   setSelectedInning: React.Dispatch<React.SetStateAction<number>>;
 };
+
 const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning }: LiveTextBroadcastProps) => {
  // const [selectedInning, setSelectedInning] = useState<number>(6);
   const [topData, setTopData] = useState<any[]>([]);
@@ -31,7 +32,7 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning }: LiveTe
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`http://3.235.198.53:8000/api/games/${gameId}/relay/${selectedInning}/`);
+        const response = await fetch(`http://3.237.44.38:8000/api/games/${gameId}/relay/${selectedInning}/`);
         if (!response.ok) throw new Error('데이터 요청 실패');
         const raw = await response.json();
 

@@ -26,7 +26,7 @@ const innings = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 const LiveGameScreen = () => {
   const route = useRoute<RouteProp<RootStackParamList, 'LiveGameScreen'>>();
   const navigation = useNavigation();
-  const { gameId, homeTeamName, awayTeamName, homeScore, awayScore } = route.params;
+  const { gameId, homeTeamName, awayTeamName, homeScore, awayScore, status } = route.params;
   const homeTeamId = teamNameToId[homeTeamName.split(' ')[0]];
   const awayTeamId = teamNameToId[awayTeamName.split(' ')[0]];
 
