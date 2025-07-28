@@ -1,32 +1,63 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import StrikeZoneBox from './StrikeZoneBox';
 import BaseballField from './BaseballField';
+import axios from 'axios';
 
 const { width: screenWidth } = Dimensions.get('window');
 const BASE_WIDTH = 375;
 const scale = (size: number) => (screenWidth / BASE_WIDTH) * size;
 
+type Pitch = {
+  x: number;
+  y: number;
+  pitchNum: number;
+  pitchResult: string;
+};
+
 const FieldStatusBoard: React.FC = () => {
   const inning = 6;
   const pitchCount = 87;
 
-  const pitchData = [
-    { x: 0.7097, y: 1.8937, pitchNum: 8, pitchResult: '타격' },
-    { x: 0.5597, y: 1.9396, pitchNum: 7, pitchResult: '파울' },
-    { x: -0.9004, y: 3.1996, pitchNum: 6, pitchResult: '볼' },
-    { x: -0.0719, y: 3.8389, pitchNum: 5, pitchResult: '볼' },
-    { x: -0.7577, y: 2.3856, pitchNum: 4, pitchResult: '파울' },
-    { x: -0.5311, y: 0.6612, pitchNum: 3, pitchResult: '헛스윙' },
-    { x: -1.3682, y: 2.3547, pitchNum: 2, pitchResult: '볼' },
-    { x: 0.4839, y: 1.4516, pitchNum: 1, pitchResult: '파울' },
-  ];
+  const [strikeZone, setStrikeZone] = useState<[number, number, number, number]>([3.305, 1.603, 0.75, -0.75]);
+  const [pitches, setPitches] = useState<Pitch[]>([]);
+
+  useEffect(() => {
+    const fetchStrikeZoneData = async () => {
+      try {
+        const res = await axios.get('http://3.237.44.38:8000/api/games/20250703SSDS02025/relay/1/');
+        const data = res.data;
+
+        if (Array.isArray(data) && data.length > 0) {
+          // 첫 투구 기준으로 스트존 추출 (모든 투구가 동일하다고 가정)
+          const zone = JSON.parse(data[0].strike_zone);
+          setStrikeZone(zone);
+
+          // pitch 객체 리스트로 변환
+          const parsed = data
+            .filter((item: any) => Array.isArray(item.pitch_coordinate) && item.pitch_coordinate.length > 0)
+            .map((item: any, idx: number) => ({
+              x: item.pitch_coordinate[0][0],
+              y: item.pitch_coordinate[0][1],
+              pitchNum: item.pitch_number ?? idx + 1,
+              pitchResult: item.pitch_result ?? '기타',
+            }));
+
+          setPitches(parsed);
+        }
+      } catch (err) {
+        console.error('스트라이크존 데이터 로드 실패:', err);
+      }
+    };
+
+    fetchStrikeZoneData();
+  }, []);
 
   return (
     <View style={styles.container}>
       <View style={styles.diamondView}>
         <View style={{ width: '120%', height: '100%' }}>
-        <BaseballField width="100%" height="100%" />
+          <BaseballField width="100%" height="100%" />
         </View>
       </View>
 
@@ -46,24 +77,24 @@ const FieldStatusBoard: React.FC = () => {
         </View>
 
         <View style={styles.countBox}>
-         {[
+          {[
             { label: 'B', count: 3, color: '#6c3', max: 4 },
             { label: 'S', count: 2, color: '#fc3', max: 3 },
             { label: 'O', count: 1, color: '#f44', max: 3 },
-            ].map(({ label, count, color, max }) => (
+          ].map(({ label, count, color, max }) => (
             <View style={styles.countRow} key={label}>
-                <Text style={styles.countLabel}>{label}</Text>
-                {Array(max).fill(0).map((_, i) => (
+              <Text style={styles.countLabel}>{label}</Text>
+              {Array(max).fill(0).map((_, i) => (
                 <View
-                    key={i}
-                    style={[
+                  key={i}
+                  style={[
                     styles.countDot,
                     { backgroundColor: i < count ? color : '#8bb980' },
-                    ]}
+                  ]}
                 />
-                ))}
+              ))}
             </View>
-            ))}
+          ))}
           <View style={styles.countRow}>
             <Text style={styles.countLabel}>P</Text>
             <Text style={styles.pitchText}>{pitchCount}</Text>
@@ -72,8 +103,8 @@ const FieldStatusBoard: React.FC = () => {
 
         <View style={styles.strikeZoneContainer}>
           <StrikeZoneBox
-            strikeZone={[3.305, 1.603, 0.75, -0.75]}
-            pitches={pitchData}
+            strikeZone={strikeZone}
+            pitches={pitches}
             width={scale(110)}
             height={scale(130)}
           />
@@ -84,6 +115,7 @@ const FieldStatusBoard: React.FC = () => {
 };
 
 export default FieldStatusBoard;
+
 
 const styles = StyleSheet.create({
   container: {

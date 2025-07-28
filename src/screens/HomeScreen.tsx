@@ -35,7 +35,7 @@ interface Game {
   homeScore: number | null;
   awayScore: number | null;
   stadium: string;
-  status: 'LIVE' | 'DONE' | 'SCHEDULED';
+  status: 'live' | 'done' | 'scheduled';
   startTime?: string;
 }
 
@@ -45,9 +45,9 @@ const HomeScreen = () => {
 
   useEffect(() => {
     const fetchGames = async () => {
-      const today = '20250703'; // <- 날짜를 일단 해당 날짜로 설정 원래는 getTodayDateStr 포맷 함수로!
+      const today = '20250710'; // <- 날짜를 일단 해당 날짜로 설정 원래는 getTodayDateStr 포맷 함수로!
       try {
-        const res = await fetch(`http://3.235.198.53:8000/api/games/gamelist/${today}`);
+        const res = await fetch(`http://3.237.44.38:8000/api/games/gamelist/${today}`);
         const json = await res.json();
 
         if (json.status === 'OK') {
@@ -95,7 +95,8 @@ const HomeScreen = () => {
               homeTeamName: item.homeTeamName,
               awayTeamName: item.awayTeamName,
               homeScore:item.homeScore ?? 0,
-              awayScore:item.awayScore ?? 0
+              awayScore:item.awayScore ?? 0,
+              status:item.status,
             })}
           >
             <View style={styles.row}>
@@ -122,9 +123,9 @@ const HomeScreen = () => {
                 </View>
                 <View style={[styles.statusTag, { backgroundColor: statusStyleMap[item.status] }]}>
                   <Text style={styles.statusText}>
-                    {item.status === 'LIVE'
+                    {item.status === 'live'
                       ? 'Live'
-                      : item.status === 'DONE'
+                      : item.status === 'done'
                       ? '종료'
                       : item.startTime ?? '예정'}
                   </Text>

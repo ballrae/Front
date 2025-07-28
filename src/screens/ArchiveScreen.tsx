@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
   FlatList,
-  Image,
   StyleSheet,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 
 import LogoHeader from '../components/LogoHeader';
@@ -16,28 +16,37 @@ import XIcon from '../assets/icons/X.svg';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
-import { pitcherDummy } from '../data/pitcherDummy';
-import { batterDummy } from '../data/batterDummy';
 
+
+import teamNameMap from '../constants/teamNames';
 import FadeInView from '../components/FadeInView';
+import axios from 'axios';
 
-type PitcherType = typeof pitcherDummy[number] & { type: 'pitcher' };
-type BatterType = typeof batterDummy[number] & { type: 'batter' };
-type MergedPlayer = PitcherType | BatterType;
+interface Player {
+  id: number;
+  player_name: string;
+  team_id: string;
+  position: 'P' | 'B';
+}
 
 const ArchiveScreen = () => {
   const [search, setSearch] = useState('');
+  const [players, setPlayers] = useState<Player[]>([]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const filteredPitchers: PitcherType[] = pitcherDummy
-    .filter(player => player.name.includes(search))
-    .map(player => ({ ...player, type: 'pitcher' } as const));
+  useEffect(() => {
+    axios.get('http://3.237.44.38:8000/api/players/')
+      .then(response => {
+        setPlayers(response.data.data);
+      })
+      .catch(error => {
+        console.error('API 요청 실패:', error);
+      });
+  }, []);
 
-  const filteredBatters: BatterType[] = batterDummy
-    .filter(player => player.name.includes(search))
-    .map(player => ({ ...player, type: 'batter' } as const));
-
-  const mergedData: MergedPlayer[] = [...filteredPitchers, ...filteredBatters];
+  const filteredPlayers = players.filter(player =>
+    player.player_name.includes(search)
+  );
 
   return (
     <FadeInView style={styles.container}>
@@ -62,42 +71,25 @@ const ArchiveScreen = () => {
       </View>
 
       <FlatList
-        data={mergedData}
-        keyExtractor={(item) => `${item.type}-${item.id}`} // ✅ key 중복 방지
+        data={filteredPlayers}
+        keyExtractor={(item) => `${item.position}-${item.id}`}
         renderItem={({ item }) => (
           <TouchableOpacity
             onPress={() => {
-              if (item.type === 'pitcher') {
-                navigation.navigate('PitcherDetailScreen', { playerId: item.id });
+              if (item.position === 'P') {
+                navigation.navigate('PitcherDetailScreen', { playerId: Number(item.id) });
               } else {
-                navigation.navigate('BatterDetailScreen', { playerId: item.id });
+                navigation.navigate('BatterDetailScreen', { playerId: Number(item.id) });
               }
             }}
           >
             <View style={styles.card}>
-              <Image source={item.image} style={styles.avatar} />
+              <Image source={require('../assets/dummy.png')} style={styles.avatar} />
               <View style={styles.infoBox}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.team}>{item.team}</Text>
-                <View style={styles.statRow}>
-                  {item.type === 'pitcher' ? (
-                    <>
-                      <Text style={styles.statLabel}>이닝 </Text>
-                      <Text style={styles.statValue}>{item.IP}</Text>
-                      <Text style={styles.statDivider}>|</Text>
-                      <Text style={styles.statLabel}>탈삼진 </Text>
-                      <Text style={styles.statValue}>{item.SO}</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={styles.statLabel}>타율 </Text>
-                      <Text style={styles.statValue}>{item.AVG}</Text>
-                      <Text style={styles.statDivider}>|</Text>
-                      <Text style={styles.statLabel}>홈런 </Text>
-                      <Text style={styles.statValue}>{item.HR}</Text>
-                    </>
-                  )}
-                </View>
+                <Text style={styles.name}>{item.player_name}</Text>
+                <Text style={styles.team}>
+                  {teamNameMap[item.team_id] ?? item.team_id}
+                </Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -147,6 +139,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
+    borderBottomWidth: 1,
     borderColor: '#eee',
   },
   avatar: {
@@ -167,24 +160,5 @@ const styles = StyleSheet.create({
   team: {
     fontSize: 12,
     color: '#555',
-    marginBottom: 12,
-  },
-  statRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 13,
-    color: '#999',
-  },
-  statValue: {
-    fontSize: 13,
-    color: '#999',
-    fontWeight: 'bold',
-  },
-  statDivider: {
-    fontSize: 13,
-    color: '#999',
-    marginHorizontal: 6,
   },
 });

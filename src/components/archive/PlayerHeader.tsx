@@ -4,7 +4,7 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 
 
 interface PlayerHeaderProps {
-  id: string; 
+  id: number; 
   name: string;
   team: string;
   birth: string;
@@ -15,9 +15,14 @@ interface PlayerHeaderProps {
 }
 
 // 생년월일 포맷팅
-const formatBirthDate = (birth: string) => {
-  const [year, month, day] = birth.split('-');
-  return `${year}년 ${parseInt(month)}월 ${parseInt(day)}일`;
+const formatBirthDate = (birth?: string) => {
+  if (!birth) return '생년월일 정보 없음';
+  try {
+    const [year, month, day] = birth.split('-');
+    return `${year}년 ${parseInt(month)}월 ${parseInt(day)}일`;
+  } catch (e) {
+    return '날짜 형식 오류';
+  }
 };
 
 const PlayerHeader: React.FC<PlayerHeaderProps> = ({ name, team, birth, pitch, bat, position, image }) => {
