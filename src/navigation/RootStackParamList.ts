@@ -19,7 +19,7 @@ export type RootStackParamList = {
     awayTeamName: string;
     homeScore:number;
     awayScore:number;
-    status: 'live' | 'done' | 'scheduled';
+    status: 'LIVE' | 'DONE' | 'SCHEDULED';
   };
   ArchiveScreen: undefined;
   PitcherDetailScreen: { playerId: number };

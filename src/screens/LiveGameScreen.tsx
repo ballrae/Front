@@ -4,29 +4,25 @@ import {
   Text,
   StyleSheet,
   Image,
-  TouchableOpacity,
   ScrollView,
 } from 'react-native';
-// 네비게이션
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/RootStackParamList';
-// 매핑
 import teamLogoMap from '../constants/teamLogos';
 import teamNameToId from '../constants/teamIdMap';
-//컴포넌트
 import Header from '../components/Header';
 import FieldStatusBoard from '../components/livegame/FieldStatusBoard';
 import PlayerInfoBoard from '../components/livegame/PlayerInfoBoard';
-import LiveTextBroadcast from '../components/livegame/LiveTextBroadcast'
+import LiveTextBroadcast from '../components/livegame/LiveTextBroadcast';
 
 const innings = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-
 
 const LiveGameScreen = () => {
   const route = useRoute<RouteProp<RootStackParamList, 'LiveGameScreen'>>();
   const navigation = useNavigation();
   const { gameId, homeTeamName, awayTeamName, homeScore, awayScore, status } = route.params;
+
   const homeTeamId = teamNameToId[homeTeamName.split(' ')[0]];
   const awayTeamId = teamNameToId[awayTeamName.split(' ')[0]];
 
@@ -34,13 +30,11 @@ const LiveGameScreen = () => {
 
   return (
     <ScrollView style={styles.container}>
-      <View>
-        <Header
-          title={` ${awayTeamName.split(' ')[0]} vs ${homeTeamName.split(' ')[0]}`}
-          showBackButton
-          onBackPress={() => navigation.goBack()}
-        />
-      </View>
+      <Header
+        title={` ${awayTeamName.split(' ')[0]} vs ${homeTeamName.split(' ')[0]}`}
+        showBackButton
+        onBackPress={() => navigation.goBack()}
+      />
 
       <View style={{ marginHorizontal: -18 }}>
         <FieldStatusBoard />
@@ -57,16 +51,25 @@ const LiveGameScreen = () => {
         </View>
 
         <View style={styles.scoreSet}>
-          <Text style={styles.inningText}>{selectedInning}회</Text>
-         <View style={styles.scoreNumbers}>
-          <Text style={styles.score}>
-            {awayScore !== null ? awayScore : '0'}
-          </Text>
-          <Text style={styles.vs}>vs</Text>
-          <Text style={styles.score}>
-            {homeScore !== null ? homeScore : '0'}
-          </Text>
-        </View>
+          {status === 'DONE' ? (
+            <View style={{ marginBottom: 10 }}>
+              <View style={styles.statusBadge}>
+                <Text style={styles.statusText}>경기 종료</Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.inningText}>{`${selectedInning}회`}</Text>
+          )}
+
+          <View style={styles.scoreNumbers}>
+            <Text style={styles.score}>
+              {awayScore !== null ? awayScore : '0'}
+            </Text>
+            <Text style={styles.vs}>vs</Text>
+            <Text style={styles.score}>
+              {homeScore !== null ? homeScore : '0'}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.teamBlockContainer}>
@@ -83,13 +86,13 @@ const LiveGameScreen = () => {
         <PlayerInfoBoard />
       </View>
 
-        <View style={{ marginBottom: 24 }}>
-         <LiveTextBroadcast
-            gameId={gameId}
-            selectedInning={selectedInning}
-            setSelectedInning={setSelectedInning}
-            />
-        </View>      
+      <View style={{ marginBottom: 24 }}>
+        <LiveTextBroadcast
+          gameId={gameId}
+          selectedInning={selectedInning}
+          setSelectedInning={setSelectedInning}
+        />
+      </View>
     </ScrollView>
   );
 };
@@ -100,11 +103,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-   // paddingHorizontal:5,
   },
   scoreBoxFull: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end', // 로고, 팀명, 점수 정렬 ↓로 맞추기
     justifyContent: 'space-between',
     marginVertical: 12,
     paddingHorizontal: 16,
@@ -143,7 +145,7 @@ const styles = StyleSheet.create({
   },
   inningText: {
     fontSize: 14,
-    marginBottom: 4,
+    marginBottom: 5,
   },
   inningTabs: {
     flexDirection: 'row',
@@ -189,5 +191,19 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: '500',
     marginTop: 4,
+  },
+  statusBadge: {
+    backgroundColor: '#9DCC8A',
+    borderRadius: 16,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6, // 경기 종료와 스코어 사이 간격
+  },
+  statusText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 13,
   },
 });
