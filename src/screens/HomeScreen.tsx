@@ -1,14 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, FlatList, Image, StyleSheet, TouchableOpacity,
+  View, Text, FlatList, Image, StyleSheet, TouchableOpacity, Modal, Pressable
 } from 'react-native';
+
 import { useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 
+
+// 달력
+import { Calendar } from 'react-native-calendars';
+import { LocaleConfig } from 'react-native-calendars';
+
+LocaleConfig.locales['ko'] = {
+  monthNames: [
+    '1월', '2월', '3월', '4월', '5월', '6월',
+    '7월', '8월', '9월', '10월', '11월', '12월',
+  ],
+  monthNamesShort: [
+    '1월', '2월', '3월', '4월', '5월', '6월',
+    '7월', '8월', '9월', '10월', '11월', '12월',
+  ],
+  dayNames: ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'],
+  dayNamesShort: ['일', '월', '화', '수', '목', '금', '토'],
+  today: '오늘',
+};
+LocaleConfig.defaultLocale = 'ko';
+
+
 import LogoHeader from '../components/LogoHeader';
 import FadeInView from '../components/FadeInView';
+
+// mapping
 import teamNameMap from '../constants/teamNames';
 import teamLogoMap from '../constants/teamLogos';
 
@@ -35,7 +59,7 @@ interface Game {
   homeScore: number | null;
   awayScore: number | null;
   stadium: string;
-  status: 'live' | 'done' | 'scheduled';
+  status: 'LIVE' | 'DONE' | 'SCHEDULED';
   startTime?: string;
 }
 
@@ -43,47 +67,85 @@ const HomeScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [games, setGames] = useState<Game[]>([]);
 
-  useEffect(() => {
-    const fetchGames = async () => {
-      const today = '20250710'; // <- 날짜를 일단 해당 날짜로 설정 원래는 getTodayDateStr 포맷 함수로!
-      try {
-        const res = await fetch(`http://3.237.44.38:8000/api/games/gamelist/${today}`);
-        const json = await res.json();
+  const [selectedDate, setSelectedDate] = useState(getTodayDateStr());
+  const [showCalendar, setShowCalendar] = useState(false);
 
-        if (json.status === 'OK') {
-          const parsedGames = json.data.map((item: any) => {
-            const [awayScore, homeScore] = // 원정 : 홈 순서
-              typeof item.score === 'string' && item.score.includes(':')
-                ? item.score.split(':').map(Number) 
-                : [null, null];
+useEffect(() => {
+  const fetchGames = async () => {
+    try {
+      const res = await fetch(`http://3.237.44.38:8000/api/games/gamelist/${selectedDate}`);
+      const json = await res.json();
 
-            return {
-              id: item.id,
-              homeTeam: item.home_team,
-              awayTeam: item.away_team,
-              homeTeamName: teamNameMap[item.home_team],
-              awayTeamName: teamNameMap[item.away_team],
-              homeScore,
-              awayScore,
-              stadium: item.stadium ?? '',
-              status: (item.status ?? '').toUpperCase(),
-              startTime: item.date ? format(new Date(item.date), 'HH:mm') : undefined,
-            };
-          });
+      if (json.status === 'OK') {
+        const parsedGames = json.data.map((item: any) => {
+          const [awayScore, homeScore] =
+            typeof item.score === 'string' && item.score.includes(':')
+              ? item.score.split(':').map(Number)
+              : [null, null];
 
-          setGames(parsedGames);
-        }
-      } catch (err) {
-        console.error('경기 데이터 불러오기 실패:', err);
+          return {
+            id: item.id,
+            homeTeam: item.home_team,
+            awayTeam: item.away_team,
+            homeTeamName: teamNameMap[item.home_team],
+            awayTeamName: teamNameMap[item.away_team],
+            homeScore,
+            awayScore,
+            stadium: item.stadium ?? '',
+            status: (item.status ?? '').toUpperCase(),
+            startTime: item.date ? format(new Date(item.date), 'HH:mm') : undefined,
+          };
+        });
+
+        setGames(parsedGames);
       }
-    };
+    } catch (err) {
+      console.error('경기 데이터 불러오기 실패:', err);
+    }
+  };
 
-    fetchGames();
-  }, []);
+  fetchGames();
+}, [selectedDate]); // <- 여기를 수정
 
   return (
     <FadeInView style={styles.container}>
-      <LogoHeader title="오늘의 경기" />
+      <TouchableOpacity onPress={() => setShowCalendar(true)}>
+  <LogoHeader title="최근 경기" />
+    </TouchableOpacity>
+
+    <Modal
+      visible={showCalendar}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowCalendar(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.calendarContainer}>
+          <Calendar
+            onDayPress={(day) => {
+              const formatted = day.dateString.replace(/-/g, '');
+              setSelectedDate(formatted);
+              setShowCalendar(false);
+            }}
+
+            markedDates={{
+              [selectedDate.slice(0, 4) + '-' + selectedDate.slice(4, 6) + '-' + selectedDate.slice(6, 8)]: {
+                selected: true,
+                selectedColor: '#408A21',
+              },
+            }}
+            theme={{
+              arrowColor: '#408A21', // 화살표 색상 (초록색)
+              todayTextColor: '#FF4D4D', // 오늘 날짜 텍스트 색상 (빨간색)
+              textDayFontWeight: 'bold',
+              textMonthFontWeight: 'bold',
+              textDayFontSize: 16,
+              textMonthFontSize: 18,
+            }}
+          />
+        </View>
+      </View>
+    </Modal>
       <FlatList
         data={games}
         keyExtractor={(item) => item.id}
@@ -123,12 +185,10 @@ const HomeScreen = () => {
                 </View>
                 <View style={[styles.statusTag, { backgroundColor: statusStyleMap[item.status] }]}>
                   <Text style={styles.statusText}>
-                    {item.status === 'live'
-                      ? 'Live'
-                      : item.status === 'done'
-                      ? '종료'
-                      : item.startTime ?? '예정'}
-                  </Text>
+                  {item.status === 'LIVE' && 'Live'}
+                  {item.status === 'DONE' && '종료'}
+                  {item.status === 'SCHEDULED' && (item.startTime ?? '예정')}
+                </Text>
                 </View>
               </View>
 
@@ -232,5 +292,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  calendarContainer: {
+    backgroundColor: 'white',
+    padding: 16,
+    paddingBottom:20,
+    borderRadius: 12,
+    width: '90%',
+    elevation: 5,
   },
 });
