@@ -17,34 +17,39 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 
-
 import { filterPlayers } from '../utils/filterPlayer';
-
-
 import teamNameMap from '../constants/teamNames';
-
 import FadeInView from '../components/FadeInView';
 import axios from 'axios';
 
-interface Player {
-  id: number;
-  player_name: string;
-  team_id: string;
-  position: 'P' | 'B';
+interface PlayerMain {
+  player: {
+    id: number;
+    player_name: string;
+    team_id: string;
+    position: 'P' | 'B';
+  };
+  stats: {
+    inn?: number;
+    k?: number;
+    avg?: number;
+    ops?: number;
+  };
 }
 
 const ArchiveScreen = () => {
   const [search, setSearch] = useState('');
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<PlayerMain[]>([]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
-    axios.get('http://3.237.44.38:8000/api/players/')
-      .then(response => {
-        setPlayers(response.data.data);
+    axios
+      .get('http://3.237.44.38:8000/api/players/main/')
+      .then((response) => {
+        setPlayers(response.data.data); // player + stats 구조
       })
-      .catch(error => {
-        console.error('API 요청 실패:', error);
+      .catch((error) => {
+        console.error('선수 정보 요청 실패:', error);
       });
   }, []);
 
@@ -74,24 +79,37 @@ const ArchiveScreen = () => {
 
       <FlatList
         data={filteredPlayers}
-        keyExtractor={(item) => `${item.position}-${item.id}`}
+        keyExtractor={(item) => `${item.player.position}-${item.player.id}`}
         renderItem={({ item }) => (
           <TouchableOpacity
             onPress={() => {
-              if (item.position === 'P') {
-                navigation.navigate('PitcherDetailScreen', { playerId: Number(item.id) });
+              if (item.player.position === 'P') {
+                navigation.navigate('PitcherDetailScreen', { playerId: item.player.id });
               } else {
-                navigation.navigate('BatterDetailScreen', { playerId: Number(item.id) });
+                navigation.navigate('BatterDetailScreen', { playerId: item.player.id });
               }
             }}
           >
             <View style={styles.card}>
               <Image source={require('../assets/dummy.png')} style={styles.avatar} />
               <View style={styles.infoBox}>
-                <Text style={styles.name}>{item.player_name}</Text>
+                <Text style={styles.name}>{item.player.player_name}</Text>
                 <Text style={styles.team}>
-                  {teamNameMap[item.team_id] ?? item.team_id}
+                  {teamNameMap[item.player.team_id] ?? item.player.team_id}
                 </Text>
+
+                {/* 포지션별 스탯 렌더링 */}
+                {item.stats && (
+                  item.player.position === 'P' ? (
+                    <Text style={styles.stat}>
+                      이닝 <Text style={styles.bold}>{item.stats.inn ?? '-'}</Text> | 탈삼진 <Text style={styles.bold}>{item.stats.k ?? '-'}</Text>
+                    </Text>
+                  ) : (
+                    <Text style={styles.stat}>
+                      타율 <Text style={styles.bold}>{item.stats.avg?.toFixed(3) ?? '-'}</Text> | 옵스 <Text style={styles.bold}>{item.stats.ops?.toFixed(3) ?? '-'}</Text>
+                    </Text>
+                  )
+                )}
               </View>
             </View>
           </TouchableOpacity>
@@ -141,8 +159,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderColor: '#eee',
+  //  borderBottomWidth: 1,
+  // borderColor: '#eee',
   },
   avatar: {
     width: 60,
@@ -162,5 +180,13 @@ const styles = StyleSheet.create({
   team: {
     fontSize: 12,
     color: '#555',
+  },
+  stat: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 12,
+  },
+  bold: {
+    fontWeight: 'bold',
   },
 });
