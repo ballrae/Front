@@ -18,7 +18,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 
 
+import { filterPlayers } from '../utils/filterPlayer';
+
+
 import teamNameMap from '../constants/teamNames';
+
 import FadeInView from '../components/FadeInView';
 import axios from 'axios';
 
@@ -44,9 +48,7 @@ const ArchiveScreen = () => {
       });
   }, []);
 
-  const filteredPlayers = players.filter(player =>
-    player.player_name.includes(search)
-  );
+  const filteredPlayers = filterPlayers(players, search);
 
   return (
     <FadeInView style={styles.container}>
@@ -57,7 +59,7 @@ const ArchiveScreen = () => {
         <View style={styles.searchBox}>
           <TextInput
             style={styles.input}
-            placeholder="선수 이름을 입력하세요"
+            placeholder="검색어를 입력하세요"
             value={search}
             onChangeText={setSearch}
             placeholderTextColor="#BDBDBD"
