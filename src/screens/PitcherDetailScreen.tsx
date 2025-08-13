@@ -58,7 +58,7 @@ const PitcherDetailScreen = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get(`http://3.237.44.38:8000/api/players/pitcher/${playerId}/`)
+    axios.get(`http://3.16.129.16:8000/api/players/pitcher/${playerId}/`)
       .then(response => {
         const raw = response.data.data;
 

@@ -46,8 +46,6 @@ const formatDate = (iso: string) => {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
 
-// ... (기존 import 구문은 동일하므로 생략)
-
 const DetailPostScreen = () => {
   const route = useRoute<DetailPostRouteProp>();
   const { teamId, teamName, postId } = route.params;

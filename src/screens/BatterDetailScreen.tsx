@@ -66,7 +66,7 @@ const BatterDetailScreen = () => {
 
   useEffect(() => {
   axios
-    .get(`http://3.237.44.38:8000/api/players/batter/${playerId}/`)
+    .get(`http://3.16.129.16:8000/api/players/batter/${playerId}/`)
     .then(res => {
       const raw = res.data.data;
 
