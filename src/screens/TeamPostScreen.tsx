@@ -32,7 +32,7 @@ const TeamPostsScreen = () => {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [canWrite, setCanWrite] = useState(true); // ✅ 글쓰기 제한 상태
+  const [canWrite, setCanWrite] = useState(true);
 
   const isFocused = useIsFocused();
 
@@ -58,7 +58,7 @@ const TeamPostsScreen = () => {
     return dateOnly.replace(/-/g, '.');
   };
 
-  // ✅ 글쓰기 버튼 제한 함수
+  // 글쓰기 버튼 제한 함수
   const onWritePress = () => {
     if (!canWrite) {
       Alert.alert(
@@ -119,7 +119,7 @@ const TeamPostsScreen = () => {
         showBackButton
         onBackPress={() => navigation.goBack()}
         showWriteButton
-        onWritePress={onWritePress} // ✅ 제한된 글쓰기 버튼
+        onWritePress={onWritePress} // 제한된 글쓰기 버튼
       />
       <FlatList
         data={posts}

@@ -3,8 +3,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import VerticalSlider from '../VerticalSlider';
 
 interface PitcherValueStatsProps {
-  K9: number;
-  BB9: number;
+  K9?: number;  // ⬅️ optional로 변경
+  BB9?: number;
   K9_percentile: number;
   BB9_percentile: number;
   RAA_percentile: number;
@@ -14,6 +14,10 @@ const getMarkerColor = (value: number) => {
   if (value >= 70) return '#408A21';
   if (value <= 30) return '#C7E0BC';
   return '#92C17D';
+};
+
+const formatValue = (value?: number): string => {
+  return typeof value === 'number' ? value.toFixed(2) : '-';
 };
 
 const PitcherValueStats: React.FC<PitcherValueStatsProps> = ({
@@ -43,10 +47,10 @@ const PitcherValueStats: React.FC<PitcherValueStatsProps> = ({
 
             <View style={styles.rowData}>
               <View style={[styles.cell, { borderRightWidth: 0.5 }]}>
-                <Text style={styles.dataText}>{K9.toFixed(2)}</Text>
+                <Text style={styles.dataText}>{formatValue(K9)}</Text>
               </View>
               <View style={[styles.cell, { borderRightWidth: 0 }]}>
-                <Text style={styles.dataText}>{BB9.toFixed(2)}</Text>
+                <Text style={styles.dataText}>{formatValue(BB9)}</Text>
               </View>
             </View>
           </View>

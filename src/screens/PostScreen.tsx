@@ -33,7 +33,7 @@ const PostScreen = () => {
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/teams/');
+        const response = await fetch('http://3.16.129.16:8000/api/teams/');
         const result = await response.json();
 
         const sorted = result.responseDto.sort((a: Team, b: Team) =>

@@ -25,15 +25,15 @@ const FieldStatusBoard: React.FC = () => {
   useEffect(() => {
     const fetchStrikeZoneData = async () => {
       try {
-        const res = await axios.get('http://3.237.44.38:8000/api/games/20250703SSDS02025/relay/1/');
+        const res = await axios.get(
+          'http://3.16.129.16:8000/api/games/20250703SSDS02025/relay/6/'
+        );
         const data = res.data;
 
         if (Array.isArray(data) && data.length > 0) {
-          // 첫 투구 기준으로 스트존 추출 (모든 투구가 동일하다고 가정)
           const zone = JSON.parse(data[0].strike_zone);
           setStrikeZone(zone);
 
-          // pitch 객체 리스트로 변환
           const parsed = data
             .filter((item: any) => Array.isArray(item.pitch_coordinate) && item.pitch_coordinate.length > 0)
             .map((item: any, idx: number) => ({
@@ -42,6 +42,9 @@ const FieldStatusBoard: React.FC = () => {
               pitchNum: item.pitch_number ?? idx + 1,
               pitchResult: item.pitch_result ?? '기타',
             }));
+
+          console.log('스트존:', zone);
+          console.log('투구 좌표:', parsed);
 
           setPitches(parsed);
         }
@@ -116,36 +119,35 @@ const FieldStatusBoard: React.FC = () => {
 
 export default FieldStatusBoard;
 
-
 const styles = StyleSheet.create({
   container: {
     width: '100%',
     height: scale(300),
     backgroundColor: '#3e8e22',
-   flexDirection: 'row',
-   justifyContent: 'space-between',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   diamondView: {
     width: '70%',
-    height: '100%',  
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',         // 혹시 넘칠 경우 잘라냄
-    },
-rightPanel: {
-  width: '30%',
-  height: '100%',
-  justifyContent: 'space-between', // 각 요소를 위/중간/아래로 나눠 배치
-  alignItems: 'flex-start',
-},
+    overflow: 'hidden',
+  },
+  rightPanel: {
+    width: '30%',
+    height: '100%',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
   inningAndRunner: {
     flexDirection: 'row',
     gap: scale(8),
-    marginTop: scale(20), // ← 적당히 띄우기
+    marginTop: scale(20),
   },
   inningBox: {
     alignItems: 'center',
-    marginLeft:scale(20), 
+    marginLeft: scale(20),
   },
   inningText: {
     color: 'white',
@@ -203,7 +205,7 @@ rightPanel: {
   },
   countBox: {
     alignItems: 'flex-start',
-    marginLeft:scale(20), 
+    marginLeft: scale(20),
   },
   countRow: {
     flexDirection: 'row',
@@ -228,10 +230,10 @@ rightPanel: {
     fontWeight: 'bold',
     fontSize: scale(13),
   },
-strikeZoneContainer: {
-  flex: 1,
-  width: '100%',
-  justifyContent: 'flex-end', // 아래로 딱 붙이는 설정
-  alignItems: 'flex-end',      // 오른쪽 정렬 
-},
+  strikeZoneContainer: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+  },
 });

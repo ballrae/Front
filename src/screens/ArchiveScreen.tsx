@@ -44,7 +44,7 @@ const ArchiveScreen = () => {
 
   useEffect(() => {
     axios
-      .get('http://3.237.44.38:8000/api/players/main/')
+      .get('http://3.16.129.16:8000/api/players/main/')
       .then((response) => {
         setPlayers(response.data.data); // player + stats 구조
       })
@@ -74,7 +74,7 @@ const ArchiveScreen = () => {
               <XIcon width={18} height={18} style={styles.icon} />
             </TouchableOpacity>
           )}
-        </View>
+        </View>  
       </View>
 
       <FlatList
@@ -106,7 +106,7 @@ const ArchiveScreen = () => {
                     </Text>
                   ) : (
                     <Text style={styles.stat}>
-                      타율 <Text style={styles.bold}>{item.stats.avg?.toFixed(3) ?? '-'}</Text> | 옵스 <Text style={styles.bold}>{item.stats.ops?.toFixed(3) ?? '-'}</Text>
+                      타율 <Text style={styles.bold}>{item.stats.avg?.toFixed(3) ?? '-'}</Text> | OPS <Text style={styles.bold}>{item.stats.ops?.toFixed(3) ?? '-'}</Text>
                     </Text>
                   )
                 )}
