@@ -13,9 +13,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 
+import axiosInstance from '../utils/axiosInstance';
 import teamLogoMap from '../constants/teamLogos';
 import LogoHeader from '../components/LogoHeader';
-
 import FadeInView from '../components/FadeInView';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList, 'PostScreen'>;
@@ -33,13 +33,10 @@ const PostScreen = () => {
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const response = await fetch('http://3.16.129.16:8000/api/teams/');
-        const result = await response.json();
-
-        const sorted = result.responseDto.sort((a: Team, b: Team) =>
+        const response = await axiosInstance.get('/api/teams/');
+        const sorted = response.data.responseDto.sort((a: Team, b: Team) =>
           a.team_name.localeCompare(b.team_name, 'ko')
         );
-
         setTeams(sorted);
       } catch (error) {
         console.error('팀 목록 불러오기 실패:', error);

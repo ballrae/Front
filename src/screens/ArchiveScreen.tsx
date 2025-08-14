@@ -13,14 +13,22 @@ import LogoHeader from '../components/LogoHeader';
 import SearchIcon from '../assets/icons/search.svg';
 import XIcon from '../assets/icons/X.svg';
 
+//네비게이션
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 
+// 검색
 import { filterPlayers } from '../utils/filterPlayer';
+
+// 매핑
 import teamNameMap from '../constants/teamNames';
+import teamSymbolMap from '../constants/teamSymbols'; 
+
 import FadeInView from '../components/FadeInView';
-import axios from 'axios';
+
+// axiosInstance로 교체
+import axiosInstance from '../utils/axiosInstance';
 
 interface PlayerMain {
   player: {
@@ -43,10 +51,10 @@ const ArchiveScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
-    axios
-      .get('http://3.16.129.16:8000/api/players/main/')
+    axiosInstance
+      .get('/api/players/main/')
       .then((response) => {
-        setPlayers(response.data.data); // player + stats 구조
+        setPlayers(response.data.data);
       })
       .catch((error) => {
         console.error('선수 정보 요청 실패:', error);
@@ -74,46 +82,53 @@ const ArchiveScreen = () => {
               <XIcon width={18} height={18} style={styles.icon} />
             </TouchableOpacity>
           )}
-        </View>  
+        </View>
       </View>
 
       <FlatList
         data={filteredPlayers}
         keyExtractor={(item) => `${item.player.position}-${item.player.id}`}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => {
-              if (item.player.position === 'P') {
-                navigation.navigate('PitcherDetailScreen', { playerId: item.player.id });
-              } else {
-                navigation.navigate('BatterDetailScreen', { playerId: item.player.id });
-              }
-            }}
-          >
-            <View style={styles.card}>
-              <Image source={require('../assets/dummy.png')} style={styles.avatar} />
-              <View style={styles.infoBox}>
-                <Text style={styles.name}>{item.player.player_name}</Text>
-                <Text style={styles.team}>
-                  {teamNameMap[item.player.team_id] ?? item.player.team_id}
-                </Text>
+        renderItem={({ item }) => {
+          const teamId = item.player.team_id.toLowerCase();
+          const teamImage = teamSymbolMap[teamId];
 
-                {/* 포지션별 스탯 렌더링 */}
-                {item.stats && (
-                  item.player.position === 'P' ? (
-                    <Text style={styles.stat}>
-                      이닝 <Text style={styles.bold}>{item.stats.inn ?? '-'}</Text> | 탈삼진 <Text style={styles.bold}>{item.stats.k ?? '-'}</Text>
-                    </Text>
-                  ) : (
-                    <Text style={styles.stat}>
-                      타율 <Text style={styles.bold}>{item.stats.avg?.toFixed(3) ?? '-'}</Text> | OPS <Text style={styles.bold}>{item.stats.ops?.toFixed(3) ?? '-'}</Text>
-                    </Text>
-                  )
-                )}
+          return (
+            <TouchableOpacity
+              onPress={() => {
+                if (item.player.position === 'P') {
+                  navigation.navigate('PitcherDetailScreen', { playerId: item.player.id });
+                } else {
+                  navigation.navigate('BatterDetailScreen', { playerId: item.player.id });
+                }
+              }}
+            >
+              <View style={styles.card}>
+                <Image
+                  source={teamImage ?? require('../assets/app_logos/ballrae_logo_green.png')}
+                  style={styles.avatar}
+                />
+                <View style={styles.infoBox}>
+                  <Text style={styles.name}>{item.player.player_name}</Text>
+                  <Text style={styles.team}>
+                    {teamNameMap[item.player.team_id] ?? item.player.team_id}
+                  </Text>
+
+                  {item.stats && (
+                    item.player.position === 'P' ? (
+                      <Text style={styles.stat}>
+                        이닝 <Text style={styles.bold}>{item.stats.inn ?? '-'}</Text> | 탈삼진 <Text style={styles.bold}>{item.stats.k ?? '-'}</Text>
+                      </Text>
+                    ) : (
+                      <Text style={styles.stat}>
+                        타율 <Text style={styles.bold}>{item.stats.avg?.toFixed(3) ?? '-'}</Text> | OPS <Text style={styles.bold}>{item.stats.ops?.toFixed(3) ?? '-'}</Text>
+                      </Text>
+                    )
+                  )}
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        )}
+            </TouchableOpacity>
+          );
+        }}
       />
     </FadeInView>
   );
@@ -159,15 +174,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-  //  borderBottomWidth: 1,
-  // borderColor: '#eee',
   },
   avatar: {
-    width: 60,
-    height: 60,
-    resizeMode: 'cover',
+    width: 40,
+    height: 40,
+    resizeMode: 'contain',
     marginRight: 16,
-    borderRadius: 30,
   },
   infoBox: {
     flex: 1,

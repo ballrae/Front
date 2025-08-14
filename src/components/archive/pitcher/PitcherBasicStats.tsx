@@ -7,11 +7,10 @@ interface PitcherBasicStatsProps {
   G: number;
   W: number;
   L: number;
-  S: number;
+  SV: number;
   IP: number;
   SO: number;
   ERA: number;
-  FIP: number;
   WHIP: number;
   WAR: number;
   AVG: number;
@@ -19,7 +18,6 @@ interface PitcherBasicStatsProps {
   L_percentile: number;
   SO_percentile: number;
   ERA_percentile: number;
-  FIP_percentile: number;
   WHIP_percentile: number;
   WAR_percentile: number;
   AVG_percentile: number;
@@ -31,14 +29,13 @@ const PitcherBasicStats: React.FC<PitcherBasicStatsProps> = (props) => {
     { label: 'L%', value: props.L_percentile },
     { label: 'SO%', value: props.SO_percentile },
     { label: 'ERA%', value: props.ERA_percentile },
-    { label: 'FIP%', value: props.FIP_percentile },
     { label: 'WHIP%', value: props.WHIP_percentile },
     { label: 'WAR%', value: props.WAR_percentile },
     { label: 'AVG%', value: props.AVG_percentile },
   ];
 
-  const statKeys = ['G', 'W', 'L', 'S', 'IP', 'SO', 'ERA', 'FIP', 'WHIP', 'WAR', 'AVG'];
-  const statValues = [props.G, props.W, props.L, props.S, props.IP, props.SO, props.ERA, props.FIP, props.WHIP, props.WAR, props.AVG];
+  const statKeys = ['G', 'W', 'L', 'SV', 'IP', 'SO', 'ERA', 'WHIP', 'WAR', 'AVG'];
+  const statValues = [props.G, props.W, props.L, props.SV, props.IP, props.SO, props.ERA, props.WHIP, props.WAR, props.AVG];
 
   return (
     <View style={styles.container}>

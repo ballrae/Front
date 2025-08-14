@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import { RouteProp, useRoute } from '@react-navigation/native';
-import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/RootStackParamList';
-import axios from 'axios';
 
 import Header from '../components/Header';
 import PlayerHeader from '../components/archive/PlayerHeader';
@@ -12,7 +9,11 @@ import BatterBasicStats from '../components/archive/batter/BatterBasicStats';
 import BatterAdvancedStats from '../components/archive/batter/BatterAdvancedStats';
 import BatterValueStats from '../components/archive/batter/BatterValueStats';
 import GroundHeatMap from '../components/archive/batter/GroundHeatMap';
+
 import teamNameMap from '../constants/teamNames';
+import teamSymbolMap from '../constants/teamSymbols';
+import { RootStackParamList } from '../navigation/RootStackParamList';
+import axiosInstance from '../utils/axiosInstance';
 
 type BatterRouteProp = RouteProp<RootStackParamList, 'BatterDetailScreen'>;
 
@@ -24,8 +25,7 @@ interface BatterData {
   pitch: string;
   bat: string;
   position: string;
-  image: string;
-  // 기본
+  image: any;
   G: number;
   AVG: number;
   WAR: number;
@@ -40,14 +40,12 @@ interface BatterData {
   SLG_percentile: number;
   OPS_percentile: number;
   HR_percentile: number;
-  // 심화
   BABIP: number;
   IsoP: number;
   BBK: number;
   BABIP_percentile: number;
   IsoP_percentile: number;
   BBK_percentile: number;
-  // 가치
   attackRAA: number;
   defenseRAA: number;
   baseRAA: number;
@@ -65,67 +63,63 @@ const BatterDetailScreen = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  axios
-    .get(`http://3.16.129.16:8000/api/players/batter/${playerId}/`)
-    .then(res => {
-      const raw = res.data.data;
+    axiosInstance
+      .get(`/api/players/batter/${playerId}/`) // ✅ baseURL 적용
+      .then((res) => {
+        const raw = res.data.data;
+        const metrics = raw.metrics ?? {};
+        const teamId = raw.player.team_id.toLowerCase();
 
-      const mappedBatter: BatterData = {
-        id: raw.player.id,
-        name: raw.player.player_name,
-        team: raw.player.team_id,
-        birth: '-',            // 서버 응답에 없으므로 기본값
-        pitch: '-',            // 기본값
-        bat: '-',              // 기본값
-        position: "타자",
-        image: '',             // 기본값
+        const mappedBatter: BatterData = {
+          id: raw.player.id,
+          name: raw.player.player_name,
+          team: raw.player.team_id,
+          birth: '-',
+          pitch: '-',
+          bat: '-',
+          position: '타자',
+          image: teamSymbolMap[teamId] ?? null,
 
-        // 기본 스탯
-        G: raw.games,
-        AVG: raw.stats.avg,
-        WAR: raw.stats.war,
-        wRC: raw.stats['wrc+'],
-        OBP: raw.stats.obp,
-        SLG: raw.stats.slg,
-        OPS: raw.stats.ops,
-        HR: raw.homeruns,
+          G: raw.games ?? 0,
+          AVG: raw.stats.avg ?? 0,
+          WAR: raw.war ?? 0,
+          wRC: raw.wrc ?? 0,
+          OBP: raw.stats.obp ?? 0,
+          SLG: raw.stats.slg ?? 0,
+          OPS: raw.stats.ops ?? 0,
+          HR: raw.homeruns ?? 0,
 
-        // 퍼센타일 - 아직 응답에 없으므로 기본값
-        WAR_percentile: 0,
-        wRCp_percentile: 0,
-        OBP_percentile: 0,
-        SLG_percentile: 0,
-        OPS_percentile: 0,
-        HR_percentile: 0,
+          WAR_percentile: metrics.war_percentile ?? 0,
+          wRCp_percentile: metrics.wrc_percentile ?? 0,
+          OBP_percentile: metrics.obp_percentile ?? 0,
+          SLG_percentile: metrics.slg_percentile ?? 0,
+          OPS_percentile: metrics.ops_percentile ?? 0,
+          HR_percentile: metrics.homeruns_percentile ?? 0,
 
-        // 심화 스탯
-        BABIP: raw.stats.babip,
-        IsoP: raw.stats.isop,
-        BBK: raw.stats['bb/k'],
+          BABIP: raw.babip ?? 0,
+          IsoP: raw.stats.isop ?? 0,
+          BBK: raw.stats['bb/k'] ?? 0,
 
-        // 퍼센타일 - 기본값
-        BABIP_percentile: 0,
-        IsoP_percentile: 0,
-        BBK_percentile: 0,
+          BABIP_percentile: metrics.babip_percentile ?? 0,
+          IsoP_percentile: metrics.iso_percentile ?? 0,
+          BBK_percentile: metrics.bb_k_percentile ?? 0,
 
-        // 가치 스탯 - 아직 응답에 없으므로 기본값
-        attackRAA: 0,
-        defenseRAA: 0,
-        baseRAA: 0,
-        throwRAA: 0,
-        runRAA: 0,
-        overallRAA: 0,
-      };
+          attackRAA: 0,
+          defenseRAA: 0,
+          baseRAA: 0,
+          throwRAA: 0,
+          runRAA: 0,
+          overallRAA: 0,
+        };
 
-      setBatter(mappedBatter);
-      setLoading(false);
-    })
-    .catch(err => {
-      console.error('타자 정보 로딩 실패:', err);
-      setLoading(false);
-    });
-}, [playerId]);
-
+        setBatter(mappedBatter);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('타자 정보 로딩 실패:', err);
+        setLoading(false);
+      });
+  }, [playerId]);
 
   if (loading) {
     return (
@@ -145,11 +139,7 @@ const BatterDetailScreen = () => {
 
   return (
     <ScrollView style={styles.container}>
-      <Header
-        showBackButton
-        onBackPress={() => navigation.goBack()}
-        title=""
-      />
+      <Header showBackButton onBackPress={() => navigation.goBack()} title="" />
       <PlayerHeader
         id={batter.id}
         name={batter.name}
