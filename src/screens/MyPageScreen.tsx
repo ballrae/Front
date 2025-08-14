@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Image, TouchableOpacity, Alert,
 } from 'react-native';
+
+//API
 import axiosInstance from '../utils/axiosInstance';
+//로그인
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from '@react-native-seoul/kakao-login';
 

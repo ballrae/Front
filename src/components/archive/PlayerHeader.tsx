@@ -52,11 +52,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    resizeMode: 'cover',
-    borderRadius: 40,
+    width: 60,
+    height: 60,
+    resizeMode: 'contain',
     marginRight: 20,
+    marginBottom: 15,
   },
   infoBox: {
     flex: 1,

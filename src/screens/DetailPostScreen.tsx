@@ -1,3 +1,4 @@
+// src/screens/DetailPostScreen.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator,
@@ -12,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import LikeIcon from '../assets/icons/like.svg';
 import LikeActiveIcon from '../assets/icons/like_active.svg';
 import ChatIcon from '../assets/icons/chat.svg';
+import axios from 'axios';
 
 type DetailPostRouteProp = RouteProp<
   { params: { teamId: string; teamName: string; postId: number } },
@@ -29,7 +31,7 @@ interface PostDetail {
   isPinned: boolean;
   likesCount: number;
   isLiked: boolean;
-  imageUri?: string;  // 추가
+  imageUri?: string;
 }
 
 interface CommentItem {
@@ -46,6 +48,17 @@ const formatDate = (iso: string) => {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
 
+// 욕설 필터링 API 함수
+const filterText = async (text: string): Promise<string> => {
+  try {
+    const res = await axios.post('http://3.16.129.16:8001/filter', { text });
+    return res.data.masked_text || text;
+  } catch (err) {
+    console.error('욕설 필터링 실패:', err);
+    return text;
+  }
+};
+
 const DetailPostScreen = () => {
   const route = useRoute<DetailPostRouteProp>();
   const { teamId, teamName, postId } = route.params;
@@ -58,47 +71,41 @@ const DetailPostScreen = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchPostAndComments = async () => {
-  console.time('🟡 fetchPostAndComments 전체');
-  try {
-    setLoading(true);
+    console.time('🟡 fetchPostAndComments 전체');
+    try {
+      setLoading(true);
+      console.time('🟢 게시글, 댓글 동시 요청');
+      const [postRes, commentsRes] = await Promise.all([
+        axiosInstance.get(`/api/posts/${teamId}/${postId}`),
+        axiosInstance.get(`/api/posts/${teamId}/${postId}/comments/`),
+      ]);
+      console.timeEnd('🟢 게시글, 댓글 동시 요청');
 
-    const token = await AsyncStorage.getItem('accessToken');
+      const postData = postRes.data.data;
+      const liked = await AsyncStorage.getItem('likedPosts');
+      const likedIds: number[] = liked ? JSON.parse(liked) : [];
+      const storedImageUri = await AsyncStorage.getItem(`postImage-${postData.postId}`);
+      postData.imageUri = storedImageUri;
 
-    console.time('🟢 게시글, 댓글 동시 요청');
-    const [postRes, commentsRes] = await Promise.all([
-      axiosInstance.get(`/api/posts/${teamId}/${postId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-      axiosInstance.get(`/api/posts/${teamId}/${postId}/comments/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-    ]);
-    console.timeEnd('🟢 게시글, 댓글 동시 요청');
+      if (likedIds.includes(postData.postId)) {
+        postData.isLiked = true;
+      }
 
-    const postData = postRes.data.data;
-
-    console.time('🔵 AsyncStorage 처리');
-    const liked = await AsyncStorage.getItem('likedPosts');
-    const likedIds: number[] = liked ? JSON.parse(liked) : [];
-
-    const storedImageUri = await AsyncStorage.getItem(`postImage-${postData.postId}`);
-    postData.imageUri = storedImageUri;
-    console.timeEnd('🔵 AsyncStorage 처리');
-
-    if (likedIds.includes(postData.postId)) {
-      postData.isLiked = true;
+      setPost(postData);
+      setComments(commentsRes.data.data);
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        Alert.alert('알림', '로그인 후 이용해주세요!', [
+          { text: '확인', onPress: () => navigation.goBack() },
+        ]);
+      } else {
+        Alert.alert('불러오기 실패', '게시글 또는 댓글 데이터를 가져오지 못했습니다.');
+      }
+    } finally {
+      setLoading(false);
+      console.timeEnd('🟡 fetchPostAndComments 전체');
     }
-
-    setPost(postData);
-    setComments(commentsRes.data.data);
-  } catch (err) {
-    Alert.alert('불러오기 실패', '게시글 또는 댓글 데이터를 가져오지 못했습니다.');
-  } finally {
-    setLoading(false);
-    console.timeEnd('🟡 fetchPostAndComments 전체');
-  }
-};
-
+  };
 
   const toggleLike = async () => {
     try {
@@ -121,11 +128,13 @@ const DetailPostScreen = () => {
     }
   };
 
+  // 필터링 적용한 댓글 작성 함수
   const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
     try {
+      const filteredComment = await filterText(commentText); // 욕설 필터링 API 호출
       await axiosInstance.post(`/api/posts/${teamId}/${postId}/comments/`, {
-        comment_content: commentText,
+        comment_content: filteredComment,
       });
       setCommentText('');
       const res = await axiosInstance.get(`/api/posts/${teamId}/${postId}/comments/`);
@@ -141,7 +150,7 @@ const DetailPostScreen = () => {
       fetchPostAndComments();
     }
   }, [isFocused]);
-  
+
   if (loading || !post) {
     return <ActivityIndicator size="large" style={{ marginTop: 50 }} />;
   }
@@ -162,12 +171,9 @@ const DetailPostScreen = () => {
             </View>
 
             <Text style={styles.title}>{post.title}</Text>
-
-            {/* ✅ 이미지가 존재할 경우 렌더링 */}
             {post.imageUri && (
               <Image source={{ uri: post.imageUri }} style={styles.postImage} />
             )}
-
             <Text style={styles.content}>{post.content}</Text>
 
             <View style={styles.reactionBar}>
@@ -227,20 +233,14 @@ const styles = StyleSheet.create({
   date: { fontSize: 12, color: '#666', marginTop: 2 },
   title: { fontSize: 18, fontWeight: '600', marginBottom: 10 },
   postImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 12,
-    resizeMode: 'cover',
-    marginBottom: 16,
+    width: '100%', height: 200, borderRadius: 12,
+    resizeMode: 'cover', marginBottom: 16,
   },
   content: { fontSize: 14, lineHeight: 24, marginBottom: 20 },
   reactionBar: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#eee',
-    paddingVertical: 10,
-    justifyContent: 'space-around',
+    flexDirection: 'row', borderTopWidth: 1,
+    borderBottomWidth: 1, borderColor: '#eee',
+    paddingVertical: 10, justifyContent: 'space-around',
   },
   reactionItem: { flexDirection: 'row', alignItems: 'center' },
   reactionText: { fontSize: 14, color: '#666', marginLeft: 6 },
@@ -253,31 +253,19 @@ const styles = StyleSheet.create({
   commentDate: { fontSize: 12, color: '#999' },
   commentContent: { fontSize: 14, color: '#333', lineHeight: 20 },
   commentInputBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: '#fff',
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderTopWidth: 1, borderColor: '#ddd', backgroundColor: '#fff',
   },
   input: {
-    flex: 1,
-    backgroundColor: '#F4F4F4',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-    marginRight: 10,
-    color: '#000',
+    flex: 1, backgroundColor: '#F4F4F4', borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 10,
+    fontSize: 14, marginRight: 10, color: '#000',
   },
   sendButton: {
     backgroundColor: '#408A21',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingVertical: 10, paddingHorizontal: 16,
+    borderRadius: 15, justifyContent: 'center', alignItems: 'center',
   },
   sendButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 });

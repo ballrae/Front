@@ -7,9 +7,15 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 
-// 달력
 import { Calendar } from 'react-native-calendars';
 import { LocaleConfig } from 'react-native-calendars';
+
+import axiosInstance from '../utils/axiosInstance';
+import LogoHeader from '../components/LogoHeader';
+import FadeInView from '../components/FadeInView';
+
+import teamNameMap from '../constants/teamNames';
+import teamLogoMap from '../constants/teamLogos';
 
 LocaleConfig.locales['ko'] = {
   monthNames: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
@@ -19,13 +25,6 @@ LocaleConfig.locales['ko'] = {
   today: '오늘',
 };
 LocaleConfig.defaultLocale = 'ko';
-
-import LogoHeader from '../components/LogoHeader';
-import FadeInView from '../components/FadeInView';
-
-// mapping
-import teamNameMap from '../constants/teamNames';
-import teamLogoMap from '../constants/teamLogos';
 
 const statusStyleMap: { [key: string]: string } = {
   LIVE: '#408A21',
@@ -57,15 +56,14 @@ interface Game {
 const HomeScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [games, setGames] = useState<Game[]>([]);
-
   const [selectedDate, setSelectedDate] = useState(getTodayDateStr());
   const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
     const fetchGames = async () => {
       try {
-        const res = await fetch(`http://3.16.129.16:8000/api/games/gamelist/${selectedDate}`);
-        const json = await res.json();
+        const res = await axiosInstance.get(`/api/games/gamelist/${selectedDate}`);
+        const json = res.data;
 
         if (json.status === 'OK') {
           const parsedGames = json.data.map((item: any) => {
@@ -90,8 +88,9 @@ const HomeScreen = () => {
 
           setGames(parsedGames);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('경기 데이터 불러오기 실패:', err);
+        alert('경기 정보를 불러오는 중 문제가 발생했습니다.');
       }
     };
 
@@ -154,7 +153,6 @@ const HomeScreen = () => {
             })}
           >
             <View style={styles.row}>
-              {/* 왼쪽: away */}
               <View style={styles.teamLeft}>
                 <Image source={teamLogoMap[item.awayTeam]} style={styles.logo} />
                 <View style={styles.teamTextBoxLeft}>
@@ -162,18 +160,12 @@ const HomeScreen = () => {
                   <Text style={styles.teamTextLine}>{item.awayTeamName.split(' ')[1]}</Text>
                 </View>
               </View>
-
-              {/* 중앙 */}
               <View style={styles.center}>
                 <Text style={styles.stadium}>{item.stadium}</Text>
                 <View style={styles.scoreBox}>
-                  <Text style={styles.score}>
-                    {item.awayScore !== null ? item.awayScore : '0'}
-                  </Text>
+                  <Text style={styles.score}>{item.awayScore ?? '0'}</Text>
                   <Text style={styles.vs}>vs</Text>
-                  <Text style={styles.score}>
-                    {item.homeScore !== null ? item.homeScore : '0'}
-                  </Text>
+                  <Text style={styles.score}>{item.homeScore ?? '0'}</Text>
                 </View>
                 <View style={[styles.statusTag, { backgroundColor: statusStyleMap[item.status] }]}>
                   <Text style={styles.statusText}>
@@ -183,8 +175,6 @@ const HomeScreen = () => {
                   </Text>
                 </View>
               </View>
-
-              {/* 오른쪽: home */}
               <View style={styles.teamRight}>
                 <View style={styles.teamTextBoxRight}>
                   <Text style={styles.teamTextLine}>{item.homeTeamName.split(' ')[0]}</Text>
@@ -299,3 +289,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 });
+
+function alert(arg0: string) {
+  throw new Error('Function not implemented.');
+}

@@ -16,8 +16,6 @@ import FieldStatusBoard from '../components/livegame/FieldStatusBoard';
 import PlayerInfoBoard from '../components/livegame/PlayerInfoBoard';
 import LiveTextBroadcast from '../components/livegame/LiveTextBroadcast';
 
-const innings = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-
 const LiveGameScreen = () => {
   const route = useRoute<RouteProp<RootStackParamList, 'LiveGameScreen'>>();
   const navigation = useNavigation();

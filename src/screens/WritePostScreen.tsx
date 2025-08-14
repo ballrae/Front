@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   TextInput,
@@ -18,6 +18,7 @@ import axiosInstance from '../utils/axiosInstance';
 import { launchImageLibrary } from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CameraIcon from '../assets/icons/camera.svg';
+import axios from 'axios'; // 욕설 필터링용
 
 const WritePostScreen = () => {
   const navigation = useNavigation();
@@ -32,6 +33,18 @@ const WritePostScreen = () => {
     navigation.goBack();
   };
 
+  const filterText = async (text: string): Promise<string> => {
+    try {
+      const res = await axios.post('http://3.16.129.16:8001/filter', {
+        text,
+      });
+      return res.data.masked_text || text;
+    } catch (err) {
+      console.error('욕설 필터링 실패:', err);
+      return text;
+    }
+  };
+
   const handleSubmit = async () => {
     console.time('🟡 handleSubmit 전체');
 
@@ -41,14 +54,21 @@ const WritePostScreen = () => {
     }
 
     try {
-      console.time('🟢 POST 요청');
+      console.time('🟠 욕설 필터링 제목/내용');
+      const [filteredTitle, filteredContent] = await Promise.all([
+        filterText(title),
+        filterText(content),
+      ]);
+      console.timeEnd('🟠 욕설 필터링 제목/내용');
+
+      console.time('🟢 POST 게시글 등록');
       const response = await axiosInstance.post('/api/posts/create/', {
         team: teamId,
-        post_title: title,
-        post_content: content,
+        post_title: filteredTitle,
+        post_content: filteredContent,
         is_pinned: false,
       });
-      console.timeEnd('🟢 POST 요청');
+      console.timeEnd('🟢 POST 게시글 등록');
 
       if (response.status === 201) {
         const postId = response.data.data.postId;
@@ -68,7 +88,10 @@ const WritePostScreen = () => {
       }
     } catch (error: any) {
       console.error(error);
-      if (error.response?.data?.message) {
+
+      if (error.response?.status === 401) {
+        Alert.alert('알림', '로그인 후 이용해주세요!');
+      } else if (error.response?.data?.message) {
         Alert.alert('등록 실패', error.response.data.message);
       } else {
         Alert.alert('오류', '네트워크 오류가 발생했습니다.');
@@ -87,6 +110,26 @@ const WritePostScreen = () => {
     if (result.didCancel) return;
     if (result.assets && result.assets.length > 0) {
       setImageUri(result.assets[0].uri || null);
+    }
+  };
+
+  // ✅ 댓글 작성 함수 예시 (댓글도 욕설 필터링 적용)
+  const writeComment = async (commentText: string, postId: number) => {
+    try {
+      const filteredComment = await filterText(commentText);
+
+      const res = await axiosInstance.post(`/api/posts/${postId}/comments/`, {
+        comment: filteredComment,
+      });
+
+      if (res.status === 201) {
+        Alert.alert('댓글 등록 완료');
+      } else {
+        Alert.alert('댓글 등록 실패');
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert('오류', '댓글 등록 중 오류 발생');
     }
   };
 

@@ -192,8 +192,8 @@ const styles = StyleSheet.create({
   marker: {
     position: 'absolute',
     top: -8,
-    width: 18,
-    height: 18,
+    width: 22.5,
+    height: 22,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',

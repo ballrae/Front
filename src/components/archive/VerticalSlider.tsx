@@ -1,26 +1,22 @@
-// src/components/common/VerticalSlider.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 interface VerticalSliderProps {
-  value: number;
+  value: number; // 0 ~ 100
   label: string;
 }
 
 const VerticalSlider: React.FC<VerticalSliderProps> = ({ value, label }) => {
+  const graphHeight = 140;
+  const markerTop = Math.min(Math.max((100 - value) / 100 * graphHeight, 10), 125);
   return (
     <View style={styles.container}>
       <View style={styles.graph}>
         <View style={styles.fullLine} />
         <View style={[styles.dot, { top: 0 }]} />
-        <View style={[styles.dot, { top: '50%' }]} />
-        <View style={[styles.dot, { bottom: 0 }]} />
-        <View
-          style={[
-            styles.marker,
-            { top: `${100 - value}%` },
-          ]}
-        >
+        <View style={[styles.dot, { top: graphHeight / 2 }]} />
+        <View style={[styles.dot, { top: graphHeight }]} />
+        <View style={[styles.marker, { top: markerTop }]}>
           <Text style={styles.markerText}>{value}</Text>
         </View>
       </View>

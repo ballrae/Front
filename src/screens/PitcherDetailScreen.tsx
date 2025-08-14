@@ -1,9 +1,6 @@
-// 투수
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import { RouteProp, useRoute } from '@react-navigation/native';
-import { RootStackParamList } from '../navigation/RootStackParamList';
-import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import axios from 'axios';
 
@@ -13,6 +10,8 @@ import PitcherBasicStats from '../components/archive/pitcher/PitcherBasicStats';
 import PitcherValueStats from '../components/archive/pitcher/PitcherValueStats';
 
 import teamNameMap from '../constants/teamNames';
+import teamSymbols from '../constants/teamSymbols';
+import { RootStackParamList } from '../navigation/RootStackParamList';
 
 type PitcherRouteProp = RouteProp<RootStackParamList, 'PitcherDetailScreen'>;
 
@@ -26,11 +25,10 @@ interface Pitcher {
   G: number;
   W: number;
   L: number;
-  S: number;
+  SV: number;
   IP: number;
   SO: number;
   ERA: number;
-  FIP: number;
   WHIP: number;
   WAR: number;
   AVG: number;
@@ -38,7 +36,6 @@ interface Pitcher {
   L_percentile: number;
   SO_percentile: number;
   ERA_percentile: number;
-  FIP_percentile: number;
   WHIP_percentile: number;
   WAR_percentile: number;
   AVG_percentile: number;
@@ -61,42 +58,40 @@ const PitcherDetailScreen = () => {
     axios.get(`http://3.16.129.16:8000/api/players/pitcher/${playerId}/`)
       .then(response => {
         const raw = response.data.data;
+        const metrics = raw.metrics ?? {};
 
         const mappedPitcher: Pitcher = {
           id: raw.player.id,
           name: raw.player.player_name,
           team: raw.player.team_id,
-          birth: '-', // 서버 응답에 없음
-          pitch: '-', // 기본값
-          bat: '-',   // 기본값
+          birth: '-',
+          pitch: '-',
+          bat: '-',
 
-          G: raw.games,
-          W: raw.stats.w ?? 0,
-          L: raw.stats.l ?? 0,
-          S: raw.stats.sv ?? 0,
-          IP: raw.innings,
-          SO: raw.strikeouts,
-          ERA: raw.stats.era,
-          FIP: raw.stats.fip,
-          WHIP: raw.stats.whip,
-          WAR: raw.stats.war,
-          AVG: raw.stats.avg,
+          G: raw.games ?? 0,
+          W: raw.w ?? 0,
+          L: raw.l ?? 0,
+          SV: raw.sv ?? 0,
+          IP: raw.innings ?? 0,
+          SO: raw.strikeouts ?? 0,
+          ERA: raw.era ?? 0,
+          WHIP: raw.stats?.whip ?? 0,
+          WAR: raw.war ?? 0,
+          AVG: raw.stats?.avg ?? 0,
 
-          // 퍼센타일은 아직 서버에 없으니 기본값
-          W_percentile: 0,
-          L_percentile: 0,
-          SO_percentile: 0,
-          ERA_percentile: 0,
-          FIP_percentile: 0,
-          WHIP_percentile: 0,
-          WAR_percentile: 0,
-          AVG_percentile: 0,
+          W_percentile: metrics.w_percentile ?? 0,
+          L_percentile: metrics.l_percentile ?? 0,
+          SO_percentile: metrics.strikeouts_percentile ?? 0,
+          ERA_percentile: metrics.era_percentile ?? 0,
+          WHIP_percentile: 0, // JSON에는 없음
+          WAR_percentile: metrics.war_percentile ?? 0,
+          AVG_percentile: metrics.avg_percentile ?? 0,
 
-          K9: raw.stats['k/9'],
-          BB9: raw.stats['bb/9'],
-          K9_percentile: 0,
-          BB9_percentile: 0,
-          RAA_percentile: 0,
+          K9: raw.stats?.['k/9'] ?? 0,
+          BB9: raw.stats?.['bb/9'] ?? 0,
+          K9_percentile: metrics.k9_percentile ?? 0,
+          BB9_percentile: metrics.bb9_percentile ?? 0,
+          RAA_percentile: 0, // JSON에 없음
         };
 
         setPitcher(mappedPitcher);
@@ -108,7 +103,6 @@ const PitcherDetailScreen = () => {
         setLoading(false);
       });
   }, [playerId]);
-
 
   if (loading) {
     return (
@@ -127,10 +121,9 @@ const PitcherDetailScreen = () => {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-    >
+    <ScrollView style={styles.container}>
       <Header showBackButton onBackPress={() => navigation.goBack()} title="" />
+      
       <PlayerHeader
         id={pitcher.id}
         name={pitcher.name}
@@ -139,16 +132,17 @@ const PitcherDetailScreen = () => {
         pitch={pitcher.pitch}
         bat={pitcher.bat}
         position="투수"
+        image={teamSymbols[pitcher.team.toLowerCase()]}
       />
+
       <PitcherBasicStats
         G={pitcher.G}
         W={pitcher.W}
         L={pitcher.L}
-        S={pitcher.S}
+        SV={pitcher.SV}
         IP={pitcher.IP}
         SO={pitcher.SO}
         ERA={pitcher.ERA}
-        FIP={pitcher.FIP}
         WHIP={pitcher.WHIP}
         WAR={pitcher.WAR}
         AVG={pitcher.AVG}
@@ -156,11 +150,11 @@ const PitcherDetailScreen = () => {
         L_percentile={pitcher.L_percentile}
         SO_percentile={pitcher.SO_percentile}
         ERA_percentile={pitcher.ERA_percentile}
-        FIP_percentile={pitcher.FIP_percentile}
         WHIP_percentile={pitcher.WHIP_percentile}
         WAR_percentile={pitcher.WAR_percentile}
         AVG_percentile={pitcher.AVG_percentile}
       />
+
       <PitcherValueStats
         K9={pitcher.K9}
         BB9={pitcher.BB9}
@@ -180,6 +174,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   centered: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
