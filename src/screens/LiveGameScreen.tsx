@@ -81,7 +81,7 @@ const LiveGameScreen = () => {
 
       {/* 투타 정보 */}
       <View style={{ marginBottom: 24 }}>
-        <PlayerInfoBoard />
+        <PlayerInfoBoard/>
       </View>
 
       <View style={{ marginBottom: 24 }}>
@@ -89,8 +89,8 @@ const LiveGameScreen = () => {
           gameId={gameId}
           selectedInning={selectedInning}
           setSelectedInning={setSelectedInning}
-          homeTeam={homeTeam}     
-          awayTeam={awayTeam}    
+          homeTeam={homeTeam}
+          awayTeam={awayTeam}
         />
       </View>
     </ScrollView>

@@ -1,4 +1,4 @@
-// LiveTextBroadcast.tsx
+// LiveTextBroadcast.tsx (수정됨)
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
@@ -21,9 +21,11 @@ type LiveTextBroadcastProps = {
   setSelectedInning: React.Dispatch<React.SetStateAction<number>>;
   homeTeam: string;
   awayTeam: string;
+  setPitcherId?: (id: number) => void;
+  setBatterId?: (id: number) => void;
 };
 
-const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam, awayTeam }: LiveTextBroadcastProps) => {
+const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam, awayTeam , setPitcherId, setBatterId}: LiveTextBroadcastProps) => {
   const [topData, setTopData] = useState<any[]>([]);
   const [botData, setBotData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -31,7 +33,6 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam
   const [status, setStatus] = useState<'OK_REALTIME' | 'OK_ARCHIVED' | 'scheduled'>('scheduled');
 
   const scrollRef = useRef<ScrollView>(null);
-
   const allInnings = Array.from({ length: 9 }, (_, i) => i + 1);
 
   useEffect(() => {
@@ -50,32 +51,39 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam
         const botAtBats = raw.data?.bot?.atbats || [];
 
         const mapAtBats = (atbats: any[]) =>
-          atbats
-            .filter((ab: any) => {
-              const pitches = isRealtime ? ab.pitch_sequence : ab.pitches;
-              return (pitches || []).filter((p: any) => p.pitch_result).length > 0;
-            })
-            .map((ab: any) => {
-              const pitches = isRealtime ? ab.pitch_sequence : ab.pitches;
-
-              return {
-                batter: isRealtime ? ab.actual_batter : ab.actual_player,
-                batting_hand: ab.batting_hand || '',
-                at_bat: pitches.map((p: any) => ({
-                  pitch_num: p.pitch_num,
-                  type: p.pitch_result || '기타',
-                  pitch: p.pitch_type,
-                  velocity: p.speed,
-                })),
-                final_result: {
-                  code: mainresultCodeMap(ab.main_result || '') as 'B' | 'H' | 'O' | 'X', // 👈 타입 단언 추가
-                  description: ab.main_result || '결과 없음',
-                },
-              };
-            });
+          atbats.map((ab: any) => {
+            const pitches = isRealtime ? ab.pitch_sequence : ab.pitches;
+            return {
+              batter: isRealtime ? ab.actual_batter : ab.actual_player,
+              batting_hand: ab.batting_hand || '',
+              at_bat: (pitches || []).map((p: any) => ({
+                pitch_num: p.pitch_num,
+                type: p.pitch_result || '',
+                pitch: p.pitch_type || '',
+                velocity: p.speed,
+                event: p.event,
+              })),
+              final_result: {
+                code: mainresultCodeMap(ab.main_result || '') as 'B' | 'H' | 'O' | 'X',
+                description: ab.main_result || '',
+              },
+              full_result: ab.full_result || '',
+            };
+          });
 
         setTopData(mapAtBats(topAtBats));
         setBotData(mapAtBats(botAtBats));
+
+        if (setPitcherId && setBatterId) {
+          const lastBot = botAtBats[botAtBats.length - 1];
+          const lastTop = topAtBats[topAtBats.length - 1];
+          const recentAtBat = lastBot || lastTop;
+
+          if (recentAtBat?.pitcher && recentAtBat?.actual_batter) {
+            setPitcherId(Number(recentAtBat.pitcher));
+            setBatterId(Number(recentAtBat.actual_batter));
+          }
+        }
       } catch (e) {
         console.error(e);
         setError('데이터 요청 중 오류 발생');
@@ -107,10 +115,7 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam
 
   const renderPlay = (plays: any[], isTop: boolean) =>
     plays.map((play, i) => {
-      const batterName = typeof play.batter === 'string'
-        ? play.batter
-        : play.batter?.player_name || '알 수 없음';
-
+      const batterName = typeof play.batter === 'string' ? play.batter : play.batter?.player_name || '알 수 없음';
       const teamKey = isTop ? awayTeam.toLowerCase() : homeTeam.toLowerCase();
       const teamSymbol = teamSymbolMap[teamKey] || require('../../assets/app_logos/ballrae_logo_green.png');
 
@@ -126,41 +131,40 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam
                 const isLast = idx === play.at_bat.length - 1;
                 const displayCode = pitchResultTextToCodeMap[p.type] || p.type[0] || '?';
                 const circleColor = pitchResultColorMap[p.type] || '#888';
+                const hasPitch = p.pitch?.trim();
 
                 return (
                   <View key={idx} style={styles.pitchRow}>
                     <View style={styles.leftColumn}>
-                      <View style={[styles.pitchCircle, { backgroundColor: circleColor }]}> 
-                        <Text style={styles.pitchCircleText}>{displayCode}</Text>
-                      </View>
-                      <Text style={styles.pitchText}>
-                        {`${p.pitch_num}구: ${p.pitch} `}
-                        <Text style={styles.velocityText}>{`${p.velocity}km/h`}</Text>
-                      </Text>
-                    </View>
-                    {isLast && play.final_result.description !== '결과 없음' && (
-                      <View style={styles.rightColumn}>
-                        <View
-                          style={[
-                            styles.pitchCircle,
-                            {
-                              backgroundColor:
-                                mainResultColorMap[play.final_result.code as 'B' | 'H' | 'O' | 'X'],
-                            },
-                          ]}
-                        >
-                          <Text style={styles.pitchCircleText}>
-                            {play.final_result.code}
+                      {hasPitch ? (
+                        <>
+                          <View style={[styles.pitchCircle, { backgroundColor: circleColor }]}> 
+                            <Text style={styles.pitchCircleText}>{displayCode}</Text>
+                          </View>
+                          <Text style={styles.pitchText}>
+                            {`${p.pitch_num}구: ${p.pitch}`} <Text style={styles.velocityText}>{p.velocity ? `${p.velocity}km/h` : ''}</Text>
                           </Text>
-                        </View>
-                        <Text style={styles.resultText}>
-                          {renderResultDescription(play.final_result.description)}
+                        </>
+                      ) : (
+                        <Text style={styles.pitchText}>
+                          {p.type || (Array.isArray(p.event) ? p.event.join('\n') : p.event || '결과 없음')}
                         </Text>
+                      )}
+                    </View>
+                    {isLast && play.final_result.description && (
+                      <View style={styles.rightColumn}>
+                        <View style={[styles.pitchCircle, {
+                          backgroundColor: mainResultColorMap[play.final_result.code as 'B' | 'H' | 'O' | 'X'],
+                        }]}> 
+                          <Text style={styles.pitchCircleText}>{play.final_result.code}</Text>
+                        </View>
+                        {renderResultDescription(play.final_result.description)}
                       </View>
                     )}
                   </View>
                 );
-              })}
+              })} 
+              {play.full_result && play.full_result !== '(진행 중)' && <Text style={styles.fullResultText}>{play.full_result}</Text>}
             </View>
           </View>
         </View>
@@ -183,8 +187,7 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam
             disabled={status === 'scheduled'}
           >
             <Text
-              style={[ 
-                styles.inningTabText,
+              style={[styles.inningTabText,
                 selectedInning === inning && styles.selectedInning,
                 status === 'scheduled' && { color: '#aaa' },
               ]}
@@ -207,6 +210,7 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam
 };
 
 export default LiveTextBroadcast;
+
 
 const styles = StyleSheet.create({
   container: {
@@ -314,6 +318,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'left',
   },
+  fullResultText: {
+  fontSize: 11,
+  color: '#408A21',
+  marginTop: 6,
+  fontWeight: '800',
+  lineHeight: 18,
+},
+
   resultTextSmall: {
     fontSize: 10,
     color: '#666',

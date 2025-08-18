@@ -16,6 +16,7 @@ export function mainresultCodeMap(mainResult: string): 'B' | 'H' | 'O' | 'X' {
     mainResult.includes('2루타') ||
     mainResult.includes('3루타') ||
     mainResult.includes('안타') ||
+    mainResult.includes('출루') ||
     mainResult.includes('홈런')
   ) {
     return 'H';
