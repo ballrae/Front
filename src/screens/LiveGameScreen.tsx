@@ -20,12 +20,14 @@ import axiosInstance from '../utils/axiosInstance';
 const LiveGameScreen = () => {
   const route = useRoute<RouteProp<RootStackParamList, 'LiveGameScreen'>>();
   const navigation = useNavigation();
-  const { gameId, homeTeamName, awayTeamName, homeTeam, awayTeam, homeScore, awayScore, status } = route.params;
+  const { gameId, homeTeamName, awayTeamName, homeTeam, awayTeam, status } = route.params;
 
   const homeTeamId = teamNameToId[homeTeamName.split(' ')[0]];
   const awayTeamId = teamNameToId[awayTeamName.split(' ')[0]];
 
   const [selectedInning, setSelectedInning] = useState<number>(1);
+  const [homeScore, setHomeScore] = useState<number>(0);
+  const [awayScore, setAwayScore] = useState<number>(0);
 
   useEffect(() => {
     const fetchCurrentInning = async () => {
@@ -42,9 +44,20 @@ const LiveGameScreen = () => {
 
           if (isOngoing) {
             setSelectedInning(inning);
+
+            const allAtbats = [...top, ...bot];
+            const lastAtbat = allAtbats[allAtbats.length - 1];
+            if (lastAtbat?.score) {
+              const [away, home] = lastAtbat.score.split(':').map(Number);
+              setAwayScore(away);
+              setHomeScore(home);
+            }
+
             return;
           }
         }
+
+        // 기본 이닝은 9회, 점수는 그대로 유지
         setSelectedInning(9);
       } catch (err) {
         console.error('이닝 자동 설정 실패:', err);
@@ -94,13 +107,9 @@ const LiveGameScreen = () => {
           )}
 
           <View style={styles.scoreNumbers}>
-            <Text style={styles.score}>
-              {awayScore !== null ? awayScore : '0'}
-            </Text>
+            <Text style={styles.score}>{awayScore}</Text>
             <Text style={styles.vs}>vs</Text>
-            <Text style={styles.score}>
-              {homeScore !== null ? homeScore : '0'}
-            </Text>
+            <Text style={styles.score}>{homeScore}</Text>
           </View>
         </View>
 
@@ -133,11 +142,9 @@ const LiveGameScreen = () => {
 
 export default LiveGameScreen;
 
+// 생략 없는 styles 동일
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
   scoreBoxFull: {
     flexDirection: 'row',
     alignItems: 'flex-end',
