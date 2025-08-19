@@ -17,6 +17,8 @@ export type RootStackParamList = {
     gameId: string;
     homeTeamName: string;
     awayTeamName: string;
+    homeTeam: string;
+    awayTeam: string;
     homeScore:number;
     awayScore:number;
     status: 'LIVE' | 'DONE' | 'SCHEDULED';

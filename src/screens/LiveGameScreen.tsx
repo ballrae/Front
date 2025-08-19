@@ -19,7 +19,7 @@ import LiveTextBroadcast from '../components/livegame/LiveTextBroadcast';
 const LiveGameScreen = () => {
   const route = useRoute<RouteProp<RootStackParamList, 'LiveGameScreen'>>();
   const navigation = useNavigation();
-  const { gameId, homeTeamName, awayTeamName, homeScore, awayScore, status } = route.params;
+  const { gameId, homeTeamName, awayTeamName, homeTeam, awayTeam,homeScore, awayScore, status } = route.params;
 
   const homeTeamId = teamNameToId[homeTeamName.split(' ')[0]];
   const awayTeamId = teamNameToId[awayTeamName.split(' ')[0]];
@@ -81,7 +81,7 @@ const LiveGameScreen = () => {
 
       {/* 투타 정보 */}
       <View style={{ marginBottom: 24 }}>
-        <PlayerInfoBoard />
+        <PlayerInfoBoard/>
       </View>
 
       <View style={{ marginBottom: 24 }}>
@@ -89,6 +89,8 @@ const LiveGameScreen = () => {
           gameId={gameId}
           selectedInning={selectedInning}
           setSelectedInning={setSelectedInning}
+          homeTeam={homeTeam}
+          awayTeam={awayTeam}
         />
       </View>
     </ScrollView>

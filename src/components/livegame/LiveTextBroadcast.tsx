@@ -1,5 +1,5 @@
-// LiveTextBroadcast.tsx
-import React, { useEffect, useState } from 'react';
+// LiveTextBroadcast.tsx (수정됨)
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,68 +10,83 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { pitchResultColorMap, pitchResultTextToCodeMap } from '../../constants/pitchResultMaps';
+import teamSymbolMap from '../../constants/teamSymbols';
+import axiosInstance from '../../utils/axiosInstance';
+import mainResultColorMap from '../../constants/mainresultCodeMap';
+import { mainresultCodeMap } from '../../constants/mainresultCodeMap';
 
 type LiveTextBroadcastProps = {
   gameId: string;
   selectedInning: number;
   setSelectedInning: React.Dispatch<React.SetStateAction<number>>;
+  homeTeam: string;
+  awayTeam: string;
+  setPitcherId?: (id: number) => void;
+  setBatterId?: (id: number) => void;
 };
 
-const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning }: LiveTextBroadcastProps) => {
+const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam, awayTeam , setPitcherId, setBatterId}: LiveTextBroadcastProps) => {
   const [topData, setTopData] = useState<any[]>([]);
   const [botData, setBotData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [inningStatus, setInningStatus] = useState<string>('live');
+  const [status, setStatus] = useState<'OK_REALTIME' | 'OK_ARCHIVED' | 'scheduled'>('scheduled');
 
+  const scrollRef = useRef<ScrollView>(null);
   const allInnings = Array.from({ length: 9 }, (_, i) => i + 1);
 
   useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
     const fetchInningData = async () => {
-      setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`http://3.16.129.16:8000/api/games/${gameId}/relay/${selectedInning}/`);
-        if (!response.ok) throw new Error('데이터 요청 실패');
-        const raw = await response.json();
+        const res = await axiosInstance.get(`/api/games/${gameId}/relay/${selectedInning}/`);
+        const raw = res.data;
+
+        const isRealtime = raw.status === 'OK_REALTIME';
+        setStatus(raw.status);
 
         const topAtBats = raw.data?.top?.atbats || [];
         const botAtBats = raw.data?.bot?.atbats || [];
-        setInningStatus(raw.data?.status || 'live');
 
         const mapAtBats = (atbats: any[]) =>
-          atbats
-            .filter((ab: any) => {
-              const validPitches = (ab.pitches || []).filter(
-                (p: any) => p.pitch_result !== null && p.pitch_result !== undefined
-              );
-              return validPitches.length > 0;
-            })
-            .map((ab: any) => {
-              const filteredPitches = ab.pitches?.filter(
-                (p: any) => p.pitch_result !== null && p.pitch_result !== undefined
-              );
-
-              return {
-                batter: ab.actual_player || '알 수 없음',
-                batting_hand: ab.batting_hand || '',
-                at_bat: filteredPitches.map((p: any) => ({
-                  pitch_num: p.pitch_num,
-                  type: p.pitch_result || '기타',
-                  pitch: p.pitch_type,
-                  velocity: p.speed,
-                })),
-                final_result: {
-                  code: typeof ab.main_result === 'string' ? ab.main_result[0] : 'X',
-                  description: ab.main_result || '결과 없음',
-                },
-              };
-            });
+          atbats.map((ab: any) => {
+            const pitches = isRealtime ? ab.pitch_sequence : ab.pitches;
+            return {
+              batter: isRealtime ? ab.actual_batter : ab.actual_player,
+              batting_hand: ab.batting_hand || '',
+              at_bat: (pitches || []).map((p: any) => ({
+                pitch_num: p.pitch_num,
+                type: p.pitch_result || '',
+                pitch: p.pitch_type || '',
+                velocity: p.speed,
+                event: p.event,
+              })),
+              final_result: {
+                code: mainresultCodeMap(ab.main_result || '') as 'B' | 'H' | 'O' | 'X',
+                description: ab.main_result || '',
+              },
+              full_result: ab.full_result || '',
+            };
+          });
 
         setTopData(mapAtBats(topAtBats));
         setBotData(mapAtBats(botAtBats));
-      } catch (err) {
-        setError('데이터를 불러오는 중 오류가 발생했습니다.');
+
+        if (setPitcherId && setBatterId) {
+          const lastBot = botAtBats[botAtBats.length - 1];
+          const lastTop = topAtBats[topAtBats.length - 1];
+          const recentAtBat = lastBot || lastTop;
+
+          if (recentAtBat?.pitcher && recentAtBat?.actual_batter) {
+            setPitcherId(Number(recentAtBat.pitcher));
+            setBatterId(Number(recentAtBat.actual_batter));
+          }
+        }
+      } catch (e) {
+        console.error(e);
+        setError('데이터 요청 중 오류 발생');
         setTopData([]);
         setBotData([]);
       } finally {
@@ -80,80 +95,76 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning }: LiveTe
     };
 
     fetchInningData();
+    intervalId = setInterval(fetchInningData, 20000);
+    return () => clearInterval(intervalId);
   }, [gameId, selectedInning]);
 
-  const renderResultDescription = (description: string) => {
-    const openParenIndex = description.indexOf('(');
-    if (openParenIndex !== -1) {
-      const before = description.slice(0, openParenIndex).trim();
-      const after = description.slice(openParenIndex).trim();
+  const renderResultDescription = (desc: string) => {
+    const i = desc.indexOf('(');
+    if (i !== -1) {
       return (
         <Text style={styles.resultText}>
-          {before}
+          {desc.slice(0, i).trim()}
           {'\n'}
-          <Text style={styles.resultTextSmall}>{after}</Text>
+          <Text style={styles.resultTextSmall}>{desc.slice(i).trim()}</Text>
         </Text>
       );
-    } else {
-      return <Text style={styles.resultText}>{description}</Text>;
     }
+    return <Text style={styles.resultText}>{desc}</Text>;
   };
 
-  const renderPlay = (plays: any[]) =>
-    plays.map((play, index) => {
+  const renderPlay = (plays: any[], isTop: boolean) =>
+    plays.map((play, i) => {
       const batterName = typeof play.batter === 'string' ? play.batter : play.batter?.player_name || '알 수 없음';
+      const teamKey = isTop ? awayTeam.toLowerCase() : homeTeam.toLowerCase();
+      const teamSymbol = teamSymbolMap[teamKey] || require('../../assets/app_logos/ballrae_logo_green.png');
 
       return (
-        <View key={index} style={styles.playContainer}>
-          <Image source={require('../../assets/dummy.png')} style={styles.avatar} />
+        <View key={i} style={styles.playContainer}>
+          <Image source={teamSymbol} style={styles.avatar} />
           <View style={styles.infoBox}>
             <Text style={styles.batterName}>
               {batterName} <Text style={styles.battingHand}>{play.batting_hand}</Text>
             </Text>
-
             <View style={styles.pitches}>
-              {play.at_bat.map((pitch: any, i: number) => {
-                const isLast = i === play.at_bat.length - 1;
-                const pitchLabel = pitch.type;
-                const displayCode = pitchResultTextToCodeMap[pitchLabel] || pitchLabel[0] || '?';
-                const circleColor = pitchResultColorMap[pitchLabel] || '#888';
+              {play.at_bat.map((p: any, idx: number) => {
+                const isLast = idx === play.at_bat.length - 1;
+                const displayCode = pitchResultTextToCodeMap[p.type] || p.type[0] || '?';
+                const circleColor = pitchResultColorMap[p.type] || '#888';
+                const hasPitch = p.pitch?.trim();
 
                 return (
-                  <View key={i} style={styles.pitchRow}>
+                  <View key={idx} style={styles.pitchRow}>
                     <View style={styles.leftColumn}>
-                      <View style={[styles.pitchCircle, { backgroundColor: circleColor }]}>
-                        <Text style={styles.pitchCircleText}>{displayCode}</Text>
-                      </View>
-                      <Text style={styles.pitchText}>
-                        {`${pitch.pitch_num}구: ${pitch.pitch} `}
-                        <Text style={styles.velocityText}>{`${pitch.velocity}km/h`}</Text>
-                      </Text>
-                    </View>
-
-                    {isLast && (
-                      <View style={styles.rightColumn}>
-                        <View
-                          style={[
-                            styles.pitchCircle,
-                            {
-                              backgroundColor:
-                                pitchResultColorMap[play.final_result.description] || '#ccc',
-                            },
-                          ]}
-                        >
-                          <Text style={styles.pitchCircleText}>
-                            {pitchResultTextToCodeMap[play.final_result.description] ||
-                              play.final_result.code}
+                      {hasPitch ? (
+                        <>
+                          <View style={[styles.pitchCircle, { backgroundColor: circleColor }]}> 
+                            <Text style={styles.pitchCircleText}>{displayCode}</Text>
+                          </View>
+                          <Text style={styles.pitchText}>
+                            {`${p.pitch_num}구: ${p.pitch}`} <Text style={styles.velocityText}>{p.velocity ? `${p.velocity}km/h` : ''}</Text>
                           </Text>
-                        </View>
-                        <Text style={styles.resultText}>
-                          {renderResultDescription(play.final_result.description)}
+                        </>
+                      ) : (
+                        <Text style={styles.pitchText}>
+                          {p.type || (Array.isArray(p.event) ? p.event.join('\n') : p.event || '결과 없음')}
                         </Text>
+                      )}
+                    </View>
+                    {isLast && play.final_result.description && (
+                      <View style={styles.rightColumn}>
+                        <View style={[styles.pitchCircle, {
+                          backgroundColor: mainResultColorMap[play.final_result.code as 'B' | 'H' | 'O' | 'X'],
+                        }]}> 
+                          <Text style={styles.pitchCircleText}>{play.final_result.code}</Text>
+                        </View>
+                        {renderResultDescription(play.final_result.description)}
                       </View>
                     )}
                   </View>
                 );
-              })}
+              })} 
+              {play.full_result && play.full_result !== '(진행 중)' && <Text style={styles.fullResultText}>{play.full_result}</Text>}
             </View>
           </View>
         </View>
@@ -161,7 +172,7 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning }: LiveTe
     });
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} ref={scrollRef} scrollEventThrottle={16}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>문자중계</Text>
       </View>
@@ -171,15 +182,14 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning }: LiveTe
           <TouchableOpacity
             key={inning}
             onPress={() => {
-              if (inningStatus !== 'scheduled') setSelectedInning(inning);
+              if (status !== 'scheduled') setSelectedInning(inning);
             }}
-            disabled={inningStatus === 'scheduled'}
+            disabled={status === 'scheduled'}
           >
             <Text
-              style={[
-                styles.inningTabText,
+              style={[styles.inningTabText,
                 selectedInning === inning && styles.selectedInning,
-                inningStatus === 'scheduled' && { color: '#aaa' },
+                status === 'scheduled' && { color: '#aaa' },
               ]}
             >
               {inning}회
@@ -188,32 +198,19 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning }: LiveTe
         ))}
       </View>
 
-      <View style={styles.halfLabel}>
-        <Text style={styles.halfLabelText}>{selectedInning}회 초</Text>
-      </View>
-      {loading ? (
-        <ActivityIndicator size="small" color="#408A21" style={{ marginTop: 12 }} />
-      ) : topData.length > 0 ? (
-        renderPlay(topData)
-      ) : (
-        <Text style={styles.noticeText}>아직 초 이닝 정보가 없습니다.</Text>
-      )}
+      <View style={styles.halfLabel}><Text style={styles.halfLabelText}>{selectedInning}회 초</Text></View>
+      {loading ? <ActivityIndicator size="small" color="#408A21" style={{ marginTop: 12 }} /> :
+        topData.length > 0 ? renderPlay(topData, true) : <Text style={styles.noticeText}>초 이닝 정보가 없습니다.</Text>}
 
-      <View style={styles.halfLabel}>
-        <Text style={styles.halfLabelText}>{selectedInning}회 말</Text>
-      </View>
-      {loading ? (
-        <ActivityIndicator size="small" color="#408A21" style={{ marginTop: 12 }} />
-      ) : botData.length > 0 ? (
-        renderPlay(botData)
-      ) : (
-        <Text style={styles.noticeText}>말 이닝이 아직 시작되지 않았습니다.</Text>
-      )}
+      <View style={styles.halfLabel}><Text style={styles.halfLabelText}>{selectedInning}회 말</Text></View>
+      {loading ? <ActivityIndicator size="small" color="#408A21" style={{ marginTop: 12 }} /> :
+        botData.length > 0 ? renderPlay(botData, false) : <Text style={styles.noticeText}>말 이닝 정보가 없습니다.</Text>}
     </ScrollView>
   );
 };
 
 export default LiveTextBroadcast;
+
 
 const styles = StyleSheet.create({
   container: {
@@ -263,7 +260,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    resizeMode: 'contain',
     marginRight: 12,
   },
   infoBox: {
@@ -321,6 +318,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'left',
   },
+  fullResultText: {
+  fontSize: 11,
+  color: '#408A21',
+  marginTop: 6,
+  fontWeight: '800',
+  lineHeight: 18,
+},
+
   resultTextSmall: {
     fontSize: 10,
     color: '#666',
@@ -330,18 +335,17 @@ const styles = StyleSheet.create({
     color: '#888',
   },
   halfLabel: {
-  backgroundColor: '#408A21',
-  paddingHorizontal: 10,
-  paddingVertical: 4,
-  borderRadius: 999,
-  alignSelf: 'flex-start',  // 왼쪽 정렬
-  marginBottom: 25,
-  marginTop: 5,
-},
-
-halfLabelText: {
-  color: 'white',
-  fontSize: 16,
-  fontWeight: 'bold',
-},
+    backgroundColor: '#408A21',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    alignSelf: 'flex-start',
+    marginBottom: 25,
+    marginTop: 5,
+  },
+  halfLabelText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });

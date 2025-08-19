@@ -22,8 +22,6 @@ import Header from '../components/Header';
 import KakaoButtonIcon from '../assets/kakao_btn.svg';
 import teamLogoMap from '../constants/teamLogos';
 
-
-
 const MyPageScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const isFocused = useIsFocused();

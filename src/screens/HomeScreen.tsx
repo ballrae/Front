@@ -142,15 +142,18 @@ const HomeScreen = () => {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.card}
-            disabled={item.status === 'SCHEDULED'}
-            onPress={() => navigation.navigate('LiveGameScreen', {
-              gameId: item.id,
-              homeTeamName: item.homeTeamName,
-              awayTeamName: item.awayTeamName,
-              homeScore: item.homeScore ?? 0,
-              awayScore: item.awayScore ?? 0,
-              status: item.status,
-            })}
+            onPress={() =>
+              navigation.navigate('LiveGameScreen', {
+                gameId: item.id,
+                homeTeam: item.homeTeam,
+                awayTeam: item.awayTeam,
+                homeTeamName: item.homeTeamName,
+                awayTeamName: item.awayTeamName,
+                homeScore: item.homeScore ?? 0,
+                awayScore: item.awayScore ?? 0,
+                status: item.status,
+              })
+            }
           >
             <View style={styles.row}>
               <View style={styles.teamLeft}>

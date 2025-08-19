@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import StrikeZoneBox from './StrikeZoneBox';
 import BaseballField from './BaseballField';
-import axios from 'axios';
+import axiosInstance from '../../utils/axiosInstance';
 
 const { width: screenWidth } = Dimensions.get('window');
 const BASE_WIDTH = 375;
@@ -25,8 +25,8 @@ const FieldStatusBoard: React.FC = () => {
   useEffect(() => {
     const fetchStrikeZoneData = async () => {
       try {
-        const res = await axios.get(
-          'http://3.16.129.16:8000/api/games/20250703SSDS02025/relay/6/'
+        const res = await axiosInstance.get(
+          '/api/games/20250703SSDS02025/relay/6/'
         );
         const data = res.data;
 
