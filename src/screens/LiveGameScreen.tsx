@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,16 +15,44 @@ import Header from '../components/Header';
 import FieldStatusBoard from '../components/livegame/FieldStatusBoard';
 import PlayerInfoBoard from '../components/livegame/PlayerInfoBoard';
 import LiveTextBroadcast from '../components/livegame/LiveTextBroadcast';
+import axiosInstance from '../utils/axiosInstance';
 
 const LiveGameScreen = () => {
   const route = useRoute<RouteProp<RootStackParamList, 'LiveGameScreen'>>();
   const navigation = useNavigation();
-  const { gameId, homeTeamName, awayTeamName, homeTeam, awayTeam,homeScore, awayScore, status } = route.params;
+  const { gameId, homeTeamName, awayTeamName, homeTeam, awayTeam, homeScore, awayScore, status } = route.params;
 
   const homeTeamId = teamNameToId[homeTeamName.split(' ')[0]];
   const awayTeamId = teamNameToId[awayTeamName.split(' ')[0]];
 
-  const [selectedInning, setSelectedInning] = useState(1);
+  const [selectedInning, setSelectedInning] = useState<number>(1);
+
+  useEffect(() => {
+    const fetchCurrentInning = async () => {
+      try {
+        for (let inning = 1; inning <= 15; inning++) {
+          const res = await axiosInstance.get(`/api/games/${gameId}/relay/${inning}/`);
+          const data = res.data?.data;
+          const top = data.top?.atbats ?? [];
+          const bot = data.bot?.atbats ?? [];
+
+          const isOngoing = [...top, ...bot].some(
+            (atbat: any) => atbat.full_result === '(진행 중)'
+          );
+
+          if (isOngoing) {
+            setSelectedInning(inning);
+            return;
+          }
+        }
+        setSelectedInning(9);
+      } catch (err) {
+        console.error('이닝 자동 설정 실패:', err);
+      }
+    };
+
+    fetchCurrentInning();
+  }, [gameId]);
 
   return (
     <ScrollView style={styles.container}>
@@ -35,7 +63,13 @@ const LiveGameScreen = () => {
       />
 
       <View style={{ marginHorizontal: -18 }}>
-        <FieldStatusBoard />
+        <FieldStatusBoard
+          gameId={gameId}
+          selectedInning={selectedInning}
+          setSelectedInning={setSelectedInning}
+          homeTeam={homeTeam}
+          awayTeam={awayTeam}
+        />
       </View>
 
       {/* 스코어 */}
@@ -81,7 +115,7 @@ const LiveGameScreen = () => {
 
       {/* 투타 정보 */}
       <View style={{ marginBottom: 24 }}>
-        <PlayerInfoBoard/>
+        <PlayerInfoBoard />
       </View>
 
       <View style={{ marginBottom: 24 }}>
@@ -106,7 +140,7 @@ const styles = StyleSheet.create({
   },
   scoreBoxFull: {
     flexDirection: 'row',
-    alignItems: 'flex-end', // 로고, 팀명, 점수 정렬 ↓로 맞추기
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
     marginVertical: 12,
     paddingHorizontal: 16,
@@ -147,51 +181,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 5,
   },
-  inningTabs: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  inningTabText: {
-    fontSize: 14,
-    color: '#888',
-  },
-  selectedTab: {
-    fontWeight: 'bold',
-    color: '#408A21',
-    textDecorationLine: 'underline',
-  },
-  inningTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  playRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  playerImage: {
-    width: 48,
-    height: 48,
-    marginRight: 12,
-    borderRadius: 24,
-  },
-  batterName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  pitchText: {
-    fontSize: 12,
-    color: '#333',
-  },
-  resultText: {
-    fontSize: 13,
-    color: '#000',
-    fontWeight: '500',
-    marginTop: 4,
-  },
   statusBadge: {
     backgroundColor: '#9DCC8A',
     borderRadius: 16,
@@ -199,7 +188,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6, // 경기 종료와 스코어 사이 간격
+    marginBottom: 6,
   },
   statusText: {
     color: 'white',
