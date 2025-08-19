@@ -1,4 +1,3 @@
-// LiveTextBroadcast.tsx (수정됨)
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
@@ -164,7 +163,33 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam
                   </View>
                 );
               })} 
-              {play.full_result && play.full_result !== '(진행 중)' && <Text style={styles.fullResultText}>{play.full_result}</Text>}
+              {play.full_result && play.full_result !== '(진행 중)' && (
+                <View style={{ marginTop: 6 }}>
+                  {play.full_result.split('|').map((line: string, idx: number) => {
+                    const i = line.indexOf('(');
+                    const insideParen = line.slice(i).trim();
+                    const isParenthesis = i !== -1;
+
+                    const shouldNotBreak = isParenthesis && (insideParen.startsWith('(으') || insideParen.startsWith('(로'));
+
+                    if (isParenthesis && !shouldNotBreak) {
+                      return (
+                        <Text key={idx} style={styles.fullResultText}>
+                          {line.slice(0, i).trim()}
+                          {'\n'}
+                          <Text style={styles.fullresultTextSmall}>{insideParen}</Text>
+                        </Text>
+                      );
+                    }
+
+                    return (
+                      <Text key={idx} style={styles.fullResultText}>
+                        {line.trim()}
+                      </Text>
+                    );
+                  })}
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -211,141 +236,32 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam
 
 export default LiveTextBroadcast;
 
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  inningTabs: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 20,
-    paddingLeft: 5,
-  },
-  inningTabText: {
-    fontSize: 13,
-    color: '#000',
-  },
-  selectedInning: {
-    fontWeight: 'bold',
-    color: 'green',
-  },
-  title: {
-    fontSize: 20,
-    marginBottom: 12,
-    paddingLeft: 12,
-  },
-  noticeText: {
-    fontSize: 16,
-    color: '#888',
-    textAlign: 'center',
-    marginTop: 20,
-  },
-  playContainer: {
-    flexDirection: 'row',
-    marginBottom: 24,
-    paddingLeft: 5,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    resizeMode: 'contain',
-    marginRight: 12,
-  },
-  infoBox: {
-    flex: 1,
-  },
-  batterName: {
-    fontSize: 15,
-  },
-  battingHand: {
-    fontSize: 12,
-    color: '#888',
-  },
-  pitches: {
-    marginTop: 8,
-  },
-  pitchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 5,
-  },
-  leftColumn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rightColumn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    flexShrink: 0,
-    minWidth: 0,
-    marginLeft: 40,
-  },
-  pitchCircle: {
-    width: 18,
-    height: 18,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 6,
-  },
-  pitchCircleText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  pitchText: {
-    fontSize: 11,
-  },
-  resultText: {
-    fontSize: 11,
-    lineHeight: 18,
-    fontWeight: '500',
-    textAlign: 'left',
-  },
-  fullResultText: {
-  fontSize: 11,
-  color: '#408A21',
-  marginTop: 6,
-  fontWeight: '800',
-  lineHeight: 18,
-},
-
-  resultTextSmall: {
-    fontSize: 10,
-    color: '#666',
-  },
-  velocityText: {
-    fontSize: 10,
-    color: '#888',
-  },
-  halfLabel: {
-    backgroundColor: '#408A21',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    alignSelf: 'flex-start',
-    marginBottom: 25,
-    marginTop: 5,
-  },
-  halfLabelText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 16 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerTitle: { fontSize: 22, fontWeight: 'bold' },
+  inningTabs: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 20, paddingLeft: 5 },
+  inningTabText: { fontSize: 13, color: '#000' },
+  selectedInning: { fontWeight: 'bold', color: 'green' },
+  title: { fontSize: 20, marginBottom: 12, paddingLeft: 12 },
+  noticeText: { fontSize: 16, color: '#888', textAlign: 'center', marginTop: 20 },
+  playContainer: { flexDirection: 'row', marginBottom: 24, paddingLeft: 5 },
+  avatar: { width: 48, height: 48, resizeMode: 'contain', marginRight: 12 },
+  infoBox: { flex: 1 },
+  batterName: { fontSize: 15 },
+  battingHand: { fontSize: 12, color: '#888' },
+  pitches: { marginTop: 8 },
+  pitchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 },
+  leftColumn: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  rightColumn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', flexShrink: 0, minWidth: 0, marginLeft: 40 },
+  pitchCircle: { width: 18, height: 18, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 6 },
+  pitchCircleText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  pitchText: { fontSize: 11 },
+  resultText: { fontSize: 11, lineHeight: 18, fontWeight: '500', textAlign: 'left' },
+  resultTextSmall: { fontSize: 10, color: '#666' },
+  fullResultText: { fontSize: 11, color: '#408A21', fontWeight: '800', lineHeight: 18 },
+  velocityText: { fontSize: 10, color: '#888' },
+  halfLabel: { backgroundColor: '#408A21', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, alignSelf: 'flex-start', marginBottom: 25, marginTop: 5 },
+  halfLabelText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+  fullresultTextSmall: { fontSize: 10, color: '#408A21',  },
 });

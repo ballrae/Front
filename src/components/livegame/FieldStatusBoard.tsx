@@ -15,75 +15,156 @@ type Pitch = {
   pitchResult: string;
 };
 
-const FieldStatusBoard: React.FC = () => {
-  const inning = 6;
-  const pitchCount = 87;
+type DefensePositions = {
+  [position: string]: string;
+};
 
+type Props = {
+  gameId: string;
+  selectedInning: number;
+  setSelectedInning: (inning: number) => void;
+  homeTeam: string;
+  awayTeam: string;
+};
+
+const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelectedInning, homeTeam, awayTeam }) => {
   const [strikeZone, setStrikeZone] = useState<[number, number, number, number]>([3.305, 1.603, 0.75, -0.75]);
   const [pitches, setPitches] = useState<Pitch[]>([]);
+  const [defensePositions, setDefensePositions] = useState<DefensePositions>({});
+  const [bso, setBso] = useState({ B: 0, S: 0, O: 0 });
+  const [pitchCount, setPitchCount] = useState(0);
+  const [inning, setInning] = useState<number | null>(null);
+  const [onBase, setOnBase] = useState({ base1: '0', base2: '0', base3: '0' });
+  const [currentHalf, setCurrentHalf] = useState<'top' | 'bot'>('top');
+
+  const fetchData = async () => {
+    try {
+      const res = await axiosInstance.get(`/api/games/${gameId}/relay/${selectedInning}/`);
+      const data = res.data?.data;
+      if (!data) return;
+
+      let detectedHalf: 'top' | 'bot' | null = null;
+      let currentAtbat = null;
+
+      if (data.top?.atbats?.some((ab: any) => ab.full_result === '(진행 중)')) {
+        detectedHalf = 'top';
+        currentAtbat = data.top.atbats.find((ab: any) => ab.full_result === '(진행 중)');
+      } else if (data.bot?.atbats?.some((ab: any) => ab.full_result === '(진행 중)')) {
+        detectedHalf = 'bot';
+        currentAtbat = data.bot.atbats.find((ab: any) => ab.full_result === '(진행 중)');
+      }
+
+      if (!currentAtbat || !detectedHalf) return;
+
+      setCurrentHalf(detectedHalf);
+      const currentData = data[detectedHalf];
+
+      const liveInning = currentData?.inning_number ?? null;
+      setSelectedInning(liveInning);
+      setInning(liveInning);
+      setOnBase(currentAtbat.on_base ?? { base1: '0', base2: '0', base3: '0' });
+
+      const zone = currentAtbat.strike_zone;
+      if (Array.isArray(zone) && zone.length === 4) {
+        setStrikeZone(zone as [number, number, number, number]);
+      }
+
+      const pitches = currentAtbat.pitch_sequence ?? [];
+      let parsedPitches: Pitch[] = [];
+      let totalPitches = 0;
+      let ball = 0, strike = 0;
+
+      for (const p of pitches) {
+        totalPitches++;
+        const coords = p.pitch_coordinate?.[0];
+        if (Array.isArray(coords) && coords.length === 2) {
+          parsedPitches.push({
+            x: coords[0],
+            y: coords[1],
+            pitchNum: p.pitch_num ?? totalPitches,
+            pitchResult: p.pitch_result ?? '기타',
+          });
+        }
+
+        const result = p.pitch_result;
+        if (result === '스트라이크' || result === '헛스윙' || result === '파울') {
+          if (strike < 2) strike++;
+        } else if (result === '볼') {
+          if (ball < 3) ball++;
+        }
+      }
+
+      setPitches(parsedPitches);
+      setPitchCount(totalPitches);
+      setBso({ B: ball, S: strike, O: Number(currentAtbat.out ?? 0) });
+
+      const positions = detectedHalf === 'top'
+        ? data.defense_positions?.home
+        : data.defense_positions?.away;
+      setDefensePositions(positions || {});
+    } catch (err) {
+      console.error('❌ API fetch 실패:', err);
+    }
+  };
 
   useEffect(() => {
-    const fetchStrikeZoneData = async () => {
-      try {
-        const res = await axiosInstance.get(
-          '/api/games/20250703SSDS02025/relay/6/'
-        );
-        const data = res.data;
+    fetchData();
+    const interval = setInterval(fetchData, 20000);
+    return () => clearInterval(interval);
+  }, [gameId, selectedInning]);
 
-        if (Array.isArray(data) && data.length > 0) {
-          const zone = JSON.parse(data[0].strike_zone);
-          setStrikeZone(zone);
+  const getBaseStyle = (base: 'base1' | 'base2' | 'base3') => {
+    const isRunnerOn = onBase[base] !== '0';
+    const basePos =
+      base === 'base1' ? styles.runnerRight :
+      base === 'base2' ? styles.runnerTop :
+      styles.runnerLeft;
 
-          const parsed = data
-            .filter((item: any) => Array.isArray(item.pitch_coordinate) && item.pitch_coordinate.length > 0)
-            .map((item: any, idx: number) => ({
-              x: item.pitch_coordinate[0][0],
-              y: item.pitch_coordinate[0][1],
-              pitchNum: item.pitch_number ?? idx + 1,
-              pitchResult: item.pitch_result ?? '기타',
-            }));
-
-          console.log('스트존:', zone);
-          console.log('투구 좌표:', parsed);
-
-          setPitches(parsed);
-        }
-      } catch (err) {
-        console.error('스트라이크존 데이터 로드 실패:', err);
-      }
-    };
-
-    fetchStrikeZoneData();
-  }, []);
+    return [
+      styles.baseIcon,
+      basePos,
+      isRunnerOn && styles.runnerFilled,
+    ];
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.diamondView}>
         <View style={{ width: '120%', height: '100%' }}>
-          <BaseballField width="100%" height="100%" />
+          <BaseballField width="100%" height="100%" defensePositions={defensePositions} />
         </View>
       </View>
 
       <View style={styles.rightPanel}>
         <View style={styles.inningAndRunner}>
           <View style={styles.inningBox}>
-            <View style={styles.triangleUp} />
-            <Text style={styles.inningText}>{inning}</Text>
-            <View style={styles.triangleDown} />
+            <View
+              style={[
+                styles.triangleUp,
+                currentHalf === 'top' && { borderBottomColor: 'white' },
+              ]}
+            />
+            <Text style={styles.inningText}>{inning ?? '-'}</Text>
+            <View
+              style={[
+                styles.triangleDown,
+                currentHalf === 'bot' && { borderTopColor: 'white' },
+              ]}
+            />
           </View>
 
           <View style={styles.runnerBox}>
-            <View style={[styles.baseIcon, styles.runnerTop]} />
-            <View style={[styles.baseIcon, styles.runnerLeft]} />
-            <View style={[styles.baseIcon, styles.runnerRight]} />
+            {(['base1', 'base2', 'base3'] as const).map((base, idx) => (
+              <View key={idx} style={getBaseStyle(base)} />
+            ))}
           </View>
         </View>
 
         <View style={styles.countBox}>
           {[
-            { label: 'B', count: 3, color: '#6c3', max: 4 },
-            { label: 'S', count: 2, color: '#fc3', max: 3 },
-            { label: 'O', count: 1, color: '#f44', max: 3 },
+            { label: 'B', count: bso.B, color: '#6c3', max: 4 },
+            { label: 'S', count: bso.S, color: '#fc3', max: 3 },
+            { label: 'O', count: bso.O, color: '#f44', max: 3 },
           ].map(({ label, count, color, max }) => (
             <View style={styles.countRow} key={label}>
               <Text style={styles.countLabel}>{label}</Text>
@@ -163,7 +244,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: scale(7),
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderBottomColor: 'white',
+    borderBottomColor: '#a5cd8d',
   },
   triangleDown: {
     width: 0,
@@ -202,6 +283,9 @@ const styles = StyleSheet.create({
     top: '50%',
     right: scale(8),
     marginTop: -scale(13),
+  },
+  runnerFilled: {
+    backgroundColor: '#ffffff',
   },
   countBox: {
     alignItems: 'flex-start',
