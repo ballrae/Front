@@ -21,7 +21,7 @@ export type RootStackParamList = {
     awayTeam: string;
     homeScore:number;
     awayScore:number;
-    status: 'LIVE' | 'DONE' | 'SCHEDULED';
+    status: 'LIVE' | 'DONE' | 'SCHEDULED' | 'CANCELLED';
   };
   ArchiveScreen: undefined;
   PitcherDetailScreen: { playerId: number };

@@ -40,13 +40,13 @@ const WritePostScreen = () => {
       });
       return res.data.masked_text || text;
     } catch (err) {
-      console.error('욕설 필터링 실패:', err);
+     // console.error('욕설 필터링 실패:', err);
       return text;
     }
   };
 
   const handleSubmit = async () => {
-    console.time('🟡 handleSubmit 전체');
+   // console.time('🟡 handleSubmit 전체');
 
     if (!title.trim() || !content.trim()) {
       Alert.alert('알림', '제목과 내용을 모두 입력해주세요.');
@@ -54,51 +54,41 @@ const WritePostScreen = () => {
     }
 
     try {
-      console.time('🟠 욕설 필터링 제목/내용');
       const [filteredTitle, filteredContent] = await Promise.all([
         filterText(title),
         filterText(content),
       ]);
-      console.timeEnd('🟠 욕설 필터링 제목/내용');
-
-      console.time('🟢 POST 게시글 등록');
+     
       const response = await axiosInstance.post('/api/posts/create/', {
         team: teamId,
         post_title: filteredTitle,
         post_content: filteredContent,
         is_pinned: false,
       });
-      console.timeEnd('🟢 POST 게시글 등록');
+     
 
       if (response.status === 201) {
         const postId = response.data.data.postId;
 
         if (imageUri) {
-          console.time('🔵 이미지 URI 저장');
           await AsyncStorage.setItem(`postImage-${postId}`, imageUri);
-          console.timeEnd('🔵 이미지 URI 저장');
         }
 
         Alert.alert('성공', '게시글이 등록되었습니다.');
-        console.time('🟣 goBack');
         navigation.goBack();
-        console.timeEnd('🟣 goBack');
       } else {
         Alert.alert('등록 실패', response.data.message || '알 수 없는 오류가 발생했습니다.');
       }
     } catch (error: any) {
-      console.error(error);
 
       if (error.response?.status === 401) {
-        Alert.alert('알림', '로그인 후 이용해주세요!');
+        Alert.alert('알림', '글쓰기는 로그인 후 이용해주세요!');
       } else if (error.response?.data?.message) {
         Alert.alert('등록 실패', error.response.data.message);
       } else {
         Alert.alert('오류', '네트워크 오류가 발생했습니다.');
       }
     }
-
-    console.timeEnd('🟡 handleSubmit 전체');
   };
 
   const openImagePicker = async () => {
@@ -113,7 +103,7 @@ const WritePostScreen = () => {
     }
   };
 
-  // ✅ 댓글 작성 함수 예시 (댓글도 욕설 필터링 적용)
+  // 댓글 함수
   const writeComment = async (commentText: string, postId: number) => {
     try {
       const filteredComment = await filterText(commentText);
@@ -123,13 +113,12 @@ const WritePostScreen = () => {
       });
 
       if (res.status === 201) {
-        Alert.alert('댓글 등록 완료');
+        Alert.alert('댓글 등록 완료!');
       } else {
         Alert.alert('댓글 등록 실패');
       }
     } catch (err) {
-      console.error(err);
-      Alert.alert('오류', '댓글 등록 중 오류 발생');
+      Alert.alert('오류', '댓글 등록 중 오류가 발생했습니다. \n 다시 시도해주세요.');
     }
   };
 

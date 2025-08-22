@@ -11,8 +11,7 @@ import {
 import { pitchResultColorMap, pitchResultTextToCodeMap } from '../../constants/pitchResultMaps';
 import teamSymbolMap from '../../constants/teamSymbols';
 import axiosInstance from '../../utils/axiosInstance';
-import mainResultColorMap from '../../constants/mainresultCodeMap';
-import { mainresultCodeMap } from '../../constants/mainresultCodeMap';
+import mainResultColorMap, { mainresultCodeMap } from '../../constants/mainresultCodeMap';
 
 type LiveTextBroadcastProps = {
   gameId: string;
@@ -20,19 +19,31 @@ type LiveTextBroadcastProps = {
   setSelectedInning: React.Dispatch<React.SetStateAction<number>>;
   homeTeam: string;
   awayTeam: string;
+  maxInning: number;
   setPitcherId?: (id: number) => void;
   setBatterId?: (id: number) => void;
 };
 
-const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam, awayTeam , setPitcherId, setBatterId}: LiveTextBroadcastProps) => {
+const LiveTextBroadcast = ({
+  gameId,
+  selectedInning,
+  setSelectedInning,
+  homeTeam,
+  awayTeam,
+  setPitcherId,
+  setBatterId,
+}: LiveTextBroadcastProps) => {
   const [topData, setTopData] = useState<any[]>([]);
   const [botData, setBotData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<'OK_REALTIME' | 'OK_ARCHIVED' | 'scheduled'>('scheduled');
+  const [maxInningFromAPI, setMaxInningFromAPI] = useState<number>(9); // ✅ 연장 이닝 감지를 위한 상태
 
   const scrollRef = useRef<ScrollView>(null);
-  const allInnings = Array.from({ length: 9 }, (_, i) => i + 1);
+
+  const maxInning = Math.max(selectedInning, maxInningFromAPI);
+  const allInnings = Array.from({ length: maxInning }, (_, i) => i + 1);
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
@@ -48,6 +59,10 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam
 
         const topAtBats = raw.data?.top?.atbats || [];
         const botAtBats = raw.data?.bot?.atbats || [];
+
+        // ✅ 최대 이닝 감지 및 업데이트
+        const inningNum = raw.data?.top?.inning_number || raw.data?.bot?.inning_number || selectedInning;
+        setMaxInningFromAPI(prev => Math.max(prev, inningNum));
 
         const mapAtBats = (atbats: any[]) =>
           atbats.map((ab: any) => {
@@ -84,7 +99,7 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam
           }
         }
       } catch (e) {
-        console.error(e);
+       // console.error(e);
         setError('데이터 요청 중 오류 발생');
         setTopData([]);
         setBotData([]);
@@ -177,7 +192,7 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam
                         <Text key={idx} style={styles.fullResultText}>
                           {line.slice(0, i).trim()}
                           {'\n'}
-                          <Text style={styles.fullresultTextSmall}>{insideParen}</Text>
+                          <Text style={styles.resultTextSmall}>{insideParen}</Text>
                         </Text>
                       );
                     }
@@ -212,7 +227,8 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam
             disabled={status === 'scheduled'}
           >
             <Text
-              style={[styles.inningTabText,
+              style={[
+                styles.inningTabText,
                 selectedInning === inning && styles.selectedInning,
                 status === 'scheduled' && { color: '#aaa' },
               ]}
@@ -235,6 +251,8 @@ const LiveTextBroadcast = ({ gameId, selectedInning, setSelectedInning, homeTeam
 };
 
 export default LiveTextBroadcast;
+
+// ... styles 객체는 생략하지 않고 동일하게 유지 ...
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 16 },
@@ -263,5 +281,5 @@ const styles = StyleSheet.create({
   velocityText: { fontSize: 10, color: '#888' },
   halfLabel: { backgroundColor: '#408A21', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, alignSelf: 'flex-start', marginBottom: 25, marginTop: 5 },
   halfLabelText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
-  fullresultTextSmall: { fontSize: 10, color: '#408A21',  },
+  fullresultTextSmall: { fontSize: 10, color: '#408A21' },
 });

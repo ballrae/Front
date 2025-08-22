@@ -13,12 +13,18 @@ import { useNavigation } from '@react-navigation/native';
 import axiosInstance from '../utils/axiosInstance';
 import teamLogoMap from '../constants/teamLogos';
 
+// 마이팀 로컬 저장 훅
+import { useMyTeam } from '../hooks/useMyTeam';
+
+
 const teams = Object.entries(teamLogoMap).map(([id, logo]) => ({ id, logo }));
 
 const MyTeamScreen = () => {
   const navigation = useNavigation();
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-
+  const { setMyTeamIdInStorage } = useMyTeam(); // 훅
+  
+  
   const handleComplete = async () => {
     if (!selectedTeamId) {
       Alert.alert('알림', '마이팀을 선택해주세요.');
@@ -30,10 +36,12 @@ const MyTeamScreen = () => {
         team_id: selectedTeamId,
       });
 
+      //로컬에도 저장
+      await setMyTeamIdInStorage(selectedTeamId);
       Alert.alert('완료', '마이팀이 설정되었습니다.');
       navigation.goBack();
+
     } catch (error) {
-      console.error('마이팀 설정 실패', error);
       Alert.alert('에러', '마이팀 설정에 실패했습니다.');
     }
   };

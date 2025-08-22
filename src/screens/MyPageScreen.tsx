@@ -5,6 +5,7 @@ import {
 
 //API
 import axiosInstance from '../utils/axiosInstance';
+
 //로그인
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from '@react-native-seoul/kakao-login';
@@ -53,7 +54,6 @@ const MyPageScreen = () => {
       setTeamId(user.team_id || '');
       setIsLoggedIn(true);
     } catch (error) {
-      console.error('유저 정보 불러오기 실패:', error);
       setIsLoggedIn(false);
       Alert.alert('에러', '유저 정보를 불러오지 못했습니다.');
     }
@@ -62,7 +62,6 @@ const MyPageScreen = () => {
   const handleKakaoLogin = async () => {
     try {
       const token = await login();
-      console.log('Kakao access token:', token.accessToken);
 
       const res = await axiosInstance.post('/api/users/kakao/', {
         access_token: token.accessToken,
@@ -79,8 +78,7 @@ const MyPageScreen = () => {
 
       await fetchUserInfo();
     } catch (err) {
-      console.error('카카오 로그인 실패:', err);
-      Alert.alert('로그인 실패', '카카오 로그인 중 문제가 발생했습니다.');
+      Alert.alert('로그인 실패', '로그인 중 문제가 발생했습니다. \n 다시 시도해 주세요.');
     }
   };
 

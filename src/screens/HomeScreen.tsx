@@ -30,6 +30,7 @@ const statusStyleMap: { [key: string]: string } = {
   LIVE: '#408A21',
   DONE: '#92C17D',
   SCHEDULED: '#7C7C7C',
+  CANCELLED: '#C0C0C0',
 };
 
 const getTodayDateStr = () => {
@@ -49,7 +50,7 @@ interface Game {
   homeScore: number | null;
   awayScore: number | null;
   stadium: string;
-  status: 'LIVE' | 'DONE' | 'SCHEDULED';
+  status: 'LIVE' | 'DONE' | 'SCHEDULED' | 'CANCELLED';
   startTime?: string;
 }
 
@@ -66,25 +67,32 @@ const HomeScreen = () => {
         const json = res.data;
 
         if (json.status === 'OK') {
-          const parsedGames = json.data.map((item: any) => {
-            const [awayScore, homeScore] =
-              typeof item.score === 'string' && item.score.includes(':')
-                ? item.score.split(':').map(Number)
-                : [null, null];
+          const parsedGames = json.data
+            .map((item: any) => {
+              const [awayScore, homeScore] =
+                typeof item.score === 'string' && item.score.includes(':')
+                  ? item.score.split(':').map(Number)
+                  : [null, null];
 
-            return {
-              id: item.id,
-              homeTeam: item.home_team,
-              awayTeam: item.away_team,
-              homeTeamName: teamNameMap[item.home_team],
-              awayTeamName: teamNameMap[item.away_team],
-              homeScore,
-              awayScore,
-              stadium: item.stadium ?? '',
-              status: (item.status ?? '').toUpperCase(),
-              startTime: item.date ? item.date.slice(11, 16) : undefined,
-            };
-          });
+              return {
+                id: item.id,
+                homeTeam: item.home_team,
+                awayTeam: item.away_team,
+                homeTeamName: teamNameMap[item.home_team],
+                awayTeamName: teamNameMap[item.away_team],
+                homeScore,
+                awayScore,
+                stadium: item.stadium ?? '',
+                status: (item.status ?? 'SCHEDULED').toUpperCase() as 'LIVE' | 'DONE' | 'SCHEDULED' | 'CANCELLED',
+                startTime: item.date ? item.date.slice(11, 16) : undefined,
+              };
+            })
+            // ✅ CANCELLED 경기들을 맨 아래로 정렬
+            .sort((a: Game, b: Game) => {
+              if (a.status === 'CANCELLED' && b.status !== 'CANCELLED') return 1;
+              if (a.status !== 'CANCELLED' && b.status === 'CANCELLED') return -1;
+              return 0;
+            });
 
           setGames(parsedGames);
         }
@@ -175,6 +183,7 @@ const HomeScreen = () => {
                     {item.status === 'LIVE' && 'Live'}
                     {item.status === 'DONE' && '종료'}
                     {item.status === 'SCHEDULED' && (item.startTime ?? '예정')}
+                    {item.status === 'CANCELLED' && '취소'}
                   </Text>
                 </View>
               </View>

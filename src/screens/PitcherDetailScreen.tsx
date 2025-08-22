@@ -13,6 +13,8 @@ import teamNameMap from '../constants/teamNames';
 import teamSymbols from '../constants/teamSymbols';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 
+
+
 type PitcherRouteProp = RouteProp<RootStackParamList, 'PitcherDetailScreen'>;
 
 interface Pitcher {
@@ -55,7 +57,9 @@ const PitcherDetailScreen = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get(`http://3.16.129.16:8000/api/players/pitcher/${playerId}/`)
+    axios.get(`http://3.16.129.16:8000/api/players/pitcher/`, {
+      params: { id: playerId }
+    })
       .then(response => {
         const raw = response.data.data;
         const metrics = raw.metrics ?? {};
@@ -83,7 +87,7 @@ const PitcherDetailScreen = () => {
           L_percentile: metrics.l_percentile ?? 0,
           SO_percentile: metrics.strikeouts_percentile ?? 0,
           ERA_percentile: metrics.era_percentile ?? 0,
-          WHIP_percentile: 0, // JSON에는 없음
+          WHIP_percentile: metrics.whip_percentile ?? 0,
           WAR_percentile: metrics.war_percentile ?? 0,
           AVG_percentile: metrics.avg_percentile ?? 0,
 

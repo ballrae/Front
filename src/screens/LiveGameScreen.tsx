@@ -28,15 +28,26 @@ const LiveGameScreen = () => {
   const [selectedInning, setSelectedInning] = useState<number>(1);
   const [homeScore, setHomeScore] = useState<number>(0);
   const [awayScore, setAwayScore] = useState<number>(0);
+  const [pitcherPcode, setPitcherPcode] = useState<string | null>(null);
+  const [batterPcode, setBatterPcode] = useState<string | null>(null);
+  const [pitcherName, setPitcherName] = useState<string | null>(null);
+  const [batterName, setBatterName] = useState<string | null>(null); 
+  const [currentHalf, setCurrentHalf] = useState<'top' | 'bot'>('top');
+  const [maxInning, setMaxInning] = useState(9);
 
   useEffect(() => {
     const fetchCurrentInning = async () => {
       try {
-        for (let inning = 1; inning <= 15; inning++) {
+        for (let inning = 1; inning <= 11; inning++) {
           const res = await axiosInstance.get(`/api/games/${gameId}/relay/${inning}/`);
           const data = res.data?.data;
           const top = data.top?.atbats ?? [];
           const bot = data.bot?.atbats ?? [];
+
+          // 이 코드를 바로 밑에 추가
+          if ([...top, ...bot].length > 0) {
+            setMaxInning(prev => Math.max(prev, inning));
+          }
 
           const isOngoing = [...top, ...bot].some(
             (atbat: any) => atbat.full_result === '(진행 중)'
@@ -45,19 +56,35 @@ const LiveGameScreen = () => {
           if (isOngoing) {
             setSelectedInning(inning);
 
-            const allAtbats = [...top, ...bot];
-            const lastAtbat = allAtbats[allAtbats.length - 1];
-            if (lastAtbat?.score) {
-              const [away, home] = lastAtbat.score.split(':').map(Number);
-              setAwayScore(away);
-              setHomeScore(home);
+            const ongoingAtbat = [...top, ...bot].find(
+              (atbat: any) => atbat.full_result === '(진행 중)'
+            );
+
+            if (ongoingAtbat) {
+
+              const isTop = top.includes(ongoingAtbat);
+              setCurrentHalf(isTop ? 'top' : 'bot'); 
+
+
+              const { pitcher, actual_batter, score } = ongoingAtbat;
+              if (pitcher?.pcode && actual_batter?.pcode) {
+                setPitcherPcode(pitcher.pcode);
+                setBatterPcode(actual_batter.pcode);
+                setPitcherName(pitcher.player_name);  
+                setBatterName(actual_batter.player_name); 
+              }
+
+              if (score) {
+                const [away, home] = score.split(':').map(Number);
+                setAwayScore(away);
+                setHomeScore(home);
+              }
             }
 
             return;
           }
         }
 
-        // 기본 이닝은 9회, 점수는 그대로 유지
         setSelectedInning(9);
       } catch (err) {
         console.error('이닝 자동 설정 실패:', err);
@@ -124,7 +151,15 @@ const LiveGameScreen = () => {
 
       {/* 투타 정보 */}
       <View style={{ marginBottom: 24 }}>
-        <PlayerInfoBoard />
+       <PlayerInfoBoard
+      pitcherPcode={pitcherPcode}
+      batterPcode={batterPcode}
+      pitcherName={pitcherName}
+      homeTeam={homeTeam}
+      awayTeam={awayTeam}
+      batterName={batterName}
+      currentHalf={currentHalf}
+    />
       </View>
 
       <View style={{ marginBottom: 24 }}>
@@ -134,6 +169,7 @@ const LiveGameScreen = () => {
           setSelectedInning={setSelectedInning}
           homeTeam={homeTeam}
           awayTeam={awayTeam}
+          maxInning={maxInning}
         />
       </View>
     </ScrollView>
@@ -142,7 +178,6 @@ const LiveGameScreen = () => {
 
 export default LiveGameScreen;
 
-// 생략 없는 styles 동일
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   scoreBoxFull: {

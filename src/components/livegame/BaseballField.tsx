@@ -5,29 +5,45 @@ type DefensePositions = {
   [position: string]: string;
 };
 
+type OnBaseRunners = {
+  base1?: string;
+  base2?: string;
+  base3?: string;
+};
+
 type BaseballFieldProps = {
   width?: number | string;
   height?: number | string;
   defensePositions: DefensePositions;
+  onBaseRunners?: OnBaseRunners;
+  currentBatterName?: string;
 };
 
 const BaseballField: React.FC<BaseballFieldProps> = ({
   width = 200,
   height = 200,
   defensePositions,
+  onBaseRunners = {},
+  currentBatterName,
 }) => {
+  const positionCoords: { [key: string]: [number, number] } = {
+    "투수": [50, 47],
+    "포수": [50, 85],
+    "1루수": [80, 43],
+    "2루수": [70, 33],
+    "3루수": [20, 43],
+    "유격수": [29, 33],
+    "좌익수": [24, 23],
+    "중견수": [50, 12],
+    "우익수": [77, 23],
+  };
 
-const positionCoords: { [key: string]: [number, number] } = {
-  "투수": [50, 47],     // 마운드 조금 아래
-  "포수": [50, 85],     // 홈 근처
-  "1루수": [80, 43],    // 1루 안쪽
-  "2루수": [70, 33],    // 2루 우측
-  "3루수": [20, 44],    // 3루 안쪽
-  "유격수": [29, 33],   // 2루 왼쪽
-  "좌익수": [24, 23],   // 외야 왼쪽
-  "중견수": [50, 12],   // 정중앙
-  "우익수": [77, 23],   // 외야 오른쪽
-};
+  const baseCoords: { [base: string]: [number, number] } = {
+    base1: [73, 48],
+    base2: [48, 23],
+    base3: [23, 48],
+  };
+
   return (
     <Svg width={width} height={height} viewBox="0 0 100 100">
       {/* 외야 */}
@@ -43,43 +59,98 @@ const positionCoords: { [key: string]: [number, number] } = {
         <Path d="M47,76 L53,76 L53,78 L50,81.5 L47,78 Z" fill="white" />
         <Circle cx="50" cy="50" r="5" fill="#b9b68d" />
 
-        {/* 수비 위치 이름 (배경 + 텍스트) */}
+        {/* 🟩 수비 위치 이름 */}
         {Object.entries(defensePositions).map(([position, name]) => {
           const coord = positionCoords[position];
           if (!coord) return null;
           const [x, y] = coord;
-          const radiusX = 6;
-          const radiusY = 2.5;
 
           return (
             <G key={position}>
-              {/* 둥근 배경 */}
               <Rect
-                x={x - radiusX}
-                y={y - radiusY}
-                rx={radiusY}
-                ry={radiusY}
-                width={radiusX * 2}
-                height={radiusY * 2}
-                fill="#98C379" // 연한 초록색
-                fillOpacity={0.8} 
+                x={x - 6}
+                y={y - 3}
+                rx={3}
+                ry={3}
+                width={12}
+                height={6}
+                fill="#98C379"
+                fillOpacity={0.8}
               />
-              {/* 흰색 글자 */}
               <SvgText
                 x={x}
-                y={y+0.3} // 약간 아래로 내려서 중앙정렬 느낌
+                y={y + 0.5}
                 fontSize="3.2"
                 fill="white"
                 textAnchor="middle"
                 alignmentBaseline="middle"
                 fontWeight="600"
-                 fillOpacity={1} 
               >
                 {name}
               </SvgText>
             </G>
           );
         })}
+
+        {/* ⚪ 주자 위치 이름 */}
+        {Object.entries(onBaseRunners).map(([base, name]) => {
+          const coord = baseCoords[base];
+          if (!coord || !name || name === '0') return null;
+          const [x, y] = coord;
+
+          return (
+            <G key={base}>
+              <Rect
+                x={x - 5}
+                y={y - 1}
+                rx={3}
+                ry={3}
+                width={12}
+                height={6}
+                fill="white"
+                fillOpacity={0.8}
+              />
+              <SvgText
+                x={x+1}
+                y={y + 2}
+                fontSize="3.2"
+                fill="#3e8e22"
+                textAnchor="middle"
+                alignmentBaseline="middle"
+                fontWeight="600"
+              >
+                {name}
+              </SvgText>
+            </G>
+          );
+        })}
+
+        {/* 🟩 현재 타자 이름 (홈플레이트 쪽) */}
+        {currentBatterName && (
+          <G>
+            <Rect
+              x={56}
+              y={79 - 3}
+              rx={3}
+              ry={3}
+              width={12}
+              height={6}
+              fill="white"
+              fillOpacity={0.8}
+            />
+            <SvgText
+              x={62}
+              y={79 + 0.5}
+              fontSize="3.2"
+              fill="#3e8e22"
+              textAnchor="middle"
+              alignmentBaseline="middle"
+              fontWeight="600"
+            >
+              {currentBatterName}
+            </SvgText>
+          </G>
+        )}
       </G>
     </Svg>
   );
