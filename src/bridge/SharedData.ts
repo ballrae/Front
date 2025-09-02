@@ -3,30 +3,6 @@ import { NativeModules, Platform } from 'react-native';
 
 const { MessageBridge, SharedDataBridge } = NativeModules;
 
-// 메시지 리스트 정의
-const messages = [
-  '⚾ 경기 시작! 1회말 공격 시작합니다!',
-  '👤 1번 타자 지희, 타석에 섭니다!',
-  '💥 안타! 주자 1루 진루!',
-  '👣 도루 성공! 2루 진출!',
-  '🥁 클라이맥스...!',
-  '🔥 4번 타자! 적시타!!',
-  '🎉 득점 성공!!',
-  '🧹 공격 종료, 수비 준비 중...',
-  '🏁 9회말, 경기가 종료되었습니다!'
-];
-
-//  메시지를 순차적으로 보여주는 내부 함수
-async function playMessageSequence() {
-  for (let i = 0; i < messages.length; i++) {
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    updateLiveActivity(messages[i]);
-  }
-
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  endLiveActivity();
-}
-
 //  기존 구조 유지하면서 내부에서 순차 실행 호출
 export function startLiveActivity(message: string) {
   if (Platform.OS === 'android') {
@@ -34,7 +10,8 @@ export function startLiveActivity(message: string) {
   } else {
     if (SharedDataBridge?.startLiveActivity) {
       SharedDataBridge.startLiveActivity(message);
-      playMessageSequence(); // ✅ 여기서 메시지 순차 실행 시작
+      // Swift 네이티브에서 백그라운드 메시지 업데이트 처리
+      console.log("🚀 LiveActivity 시작됨 - Swift에서 백그라운드 업데이트 처리");
     } else {
       console.warn("🚨 startLiveActivity is not defined on SharedDataBridge");
     }
@@ -54,6 +31,20 @@ export function endLiveActivity() {
     SharedDataBridge.endLiveActivity();
   } else {
     console.warn("🚨 endLiveActivity is not defined on SharedDataBridge");
+  }
+}
+
+// 모든 LiveActivity 강제 정리
+export function forceEndAllLiveActivities() {
+  if (Platform.OS === 'android') {
+    console.log("💥 Android에서는 LiveActivity를 지원하지 않습니다");
+  } else {
+    if (SharedDataBridge?.forceEndAllLiveActivities) {
+      SharedDataBridge.forceEndAllLiveActivities();
+      console.log("💥 모든 LiveActivity 강제 정리 시작");
+    } else {
+      console.warn("🚨 forceEndAllLiveActivities is not defined on SharedDataBridge");
+    }
   }
 }
 

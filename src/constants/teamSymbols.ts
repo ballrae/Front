@@ -1,6 +1,6 @@
 const teamSymbolMap: { [key: string]: any } = {
   hh: require('../assets/simbols/hh_simbol.png'),
-  ka: require('../assets/simbols/ka_simbol.jpg'),
+  ka: require('../assets/simbols/ka_simbol.png'),
   kt: require('../assets/simbols/kt_simbol.png'),
   lg: require('../assets/simbols/lg_simbol.png'),
   lt: require('../assets/simbols/lt_simbol.png'),

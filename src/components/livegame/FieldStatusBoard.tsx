@@ -25,14 +25,14 @@ type Props = {
   setSelectedInning: (inning: number) => void;
   homeTeam: string;
   awayTeam: string;
+  pitcherPitchCount?: number;
 };
 
-const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelectedInning, homeTeam, awayTeam }) => {
+const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelectedInning, homeTeam, awayTeam, pitcherPitchCount }) => {
   const [strikeZone, setStrikeZone] = useState<[number, number, number, number]>([3.305, 1.603, 0.75, -0.75]);
   const [pitches, setPitches] = useState<Pitch[]>([]);
   const [defensePositions, setDefensePositions] = useState<DefensePositions>({});
   const [bso, setBso] = useState({ B: 0, S: 0, O: 0 });
-  const [pitchCount, setPitchCount] = useState(0);
   const [inning, setInning] = useState<number | null>(null);
   const [onBase, setOnBase] = useState({ base1: '0', base2: '0', base3: '0' });
   const [onBaseRunners, setOnBaseRunners] = useState<{ base1?: string; base2?: string; base3?: string }>({});
@@ -109,7 +109,6 @@ const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelected
       }
 
       setPitches(parsedPitches);
-      setPitchCount(totalPitches);
       setBso({ B: ball, S: strike, O: Number(currentAtbat.out ?? 0) });
 
       const positions = detectedHalf === 'top' ? data.defense_positions?.home : data.defense_positions?.away;
@@ -175,7 +174,7 @@ const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelected
           ))}
           <View style={styles.countRow}>
             <Text style={styles.countLabel}>P</Text>
-            <Text style={styles.pitchText}>{pitchCount}</Text>
+            <Text style={styles.pitchText}>{typeof pitcherPitchCount === 'number' ? pitcherPitchCount : 0}</Text>
           </View>
         </View>
 

@@ -1,7 +1,7 @@
 // PlayerInfoBoard.tsx
 
-import React, { useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, Image, StyleSheet, ScrollView, AppState, AppStateStatus } from 'react-native';
 import teamSymbolMap from '../../constants/teamSymbols';
 import axiosInstance from '../../utils/axiosInstance';
 
@@ -13,6 +13,7 @@ interface Props {
   homeTeam: string;
   awayTeam: string;
   currentHalf?: 'top' | 'bot';
+  onPitchCountUpdate?: (count: number) => void;
 }
 
 const PlayerInfoBoard = ({
@@ -23,115 +24,148 @@ const PlayerInfoBoard = ({
   homeTeam,
   awayTeam,
   currentHalf = 'top',
+  onPitchCountUpdate,
 }: Props) => {
   const [pitchData, setPitchData] = useState<any[]>([]);
-  const [battedBall, setBattedBall] = useState<{ left: number; center: number; right: number }>({
-    left: 0,
-    center: 0,
-    right: 0,
-  });
+  const [battedBall, setBattedBall] = useState({ left: 0, center: 0, right: 0 });
   const [pitcherStats, setPitcherStats] = useState<string[][]>([
     ['시즌', '-', '-', '-', '-', '-'],
     ['3시즌', '-', '-', '-', '-', '-'],
   ]);
   const [batterStats, setBatterStats] = useState<string[][]>([
-    ['시즌', '-', '-', '-', '-', '-', '-'],
-    ['3시즌', '-', '-', '-', '-', '-', '-'],
+    ['시즌', '-', '-', '-', '-', '-'],
+    ['3시즌', '-', '-', '-', '-', '-'],
   ]);
 
+  const [pitcherToday, setPitcherToday] = useState({
+    pitches: 0,
+    runs: 0,
+    innings: 0,
+    hits: 0,
+    strikeouts: 0,
+  });
+  const [batterToday, setBatterToday] = useState({
+    pa: 0,
+    ab: 0,
+    hits: 0,
+    homeruns: 0,
+    bb: 0,
+    strikeouts: 0,
+  });
+
+  const fetchData = useCallback(async () => {
+    if (!pitcherPcode || !batterPcode) return;
+    try {
+      const res = await axiosInstance.get(
+        `/api/players/realtime/?pitcher=${pitcherPcode}&batter=${batterPcode}`,
+      );
+      const data = res.data?.data ?? {};
+
+      setPitchData(data?.pitcher?.pitcher ?? []);
+      setBattedBall(data?.batter?.batter ?? { left: 0, center: 0, right: 0 });
+      const nextPitcherToday = data?.pitcher?.today ?? pitcherToday;
+      setPitcherToday(nextPitcherToday);
+      if (typeof nextPitcherToday?.pitches === 'number' && onPitchCountUpdate) {
+        onPitchCountUpdate(Number(nextPitcherToday.pitches));
+      }
+      setBatterToday(data?.batter?.today ?? batterToday);
+
+      const batterSeason = data?.batter?.season_2025 ?? {};
+      const batterCareer = data?.batter?.career ?? {};
+      const pitcherSeason = data?.pitcher?.season_2025 ?? {};
+      const pitcherCareer = data?.pitcher?.career ?? {};
+
+      const batterSeasonRow = [
+        '시즌',
+        String(batterSeason.ab ?? 0),
+        String(batterSeason.hits ?? 0),
+        String(batterSeason.homeruns ?? 0),
+        (batterSeason.obp ?? 0).toFixed(3),
+        (batterSeason.avg ?? 0).toFixed(3),
+      ];
+      const batterCareerRow = [
+        '3시즌',
+        String(batterCareer.ab ?? 0),
+        String(batterCareer.hits ?? 0),
+        String(batterCareer.homeruns ?? 0),
+        (batterCareer.obp ?? 0).toFixed(3),
+        (batterCareer.avg ?? 0).toFixed(3),
+      ];
+      const pitcherSeasonRow = [
+        '시즌',
+        String(pitcherSeason.games ?? 0),
+        String(pitcherSeason.innings ?? 0),
+        '-',
+        '-',
+        (pitcherSeason.era ?? 0).toFixed(2),
+      ];
+      const pitcherCareerRow = [
+        '3시즌',
+        String(pitcherCareer.games ?? 0),
+        String(pitcherCareer.innings ?? 0),
+        '-',
+        '-',
+        (pitcherCareer.era ?? 0).toFixed(2),
+      ];
+
+      setBatterStats([batterSeasonRow, batterCareerRow]);
+      setPitcherStats([pitcherSeasonRow, pitcherCareerRow]);
+    } catch (err) {
+      console.error('실시간 투타 정보 fetch 실패:', err);
+    }
+  }, [pitcherPcode, batterPcode]);
+
   useEffect(() => {
-    const fetchData = async () => {
-      if (!pitcherPcode || !batterPcode) return;
-      try {
-        const res = await axiosInstance.get(
-          `/api/players/realtime/?pitcher=${pitcherPcode}&batter=${batterPcode}`,
-        );
-        const data = res.data?.data ?? {};
+    if (!pitcherPcode || !batterPcode) return;
 
-        const batterSeason = data?.batter?.season_2025 ?? {};
-        const batterCareer = data?.batter?.career ?? {};
-        const pitcherSeason = data?.pitcher?.season_2025 ?? {};
-        const pitcherCareer = data?.pitcher?.career ?? {};
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let currentState: AppStateStatus = AppState.currentState;
 
-        setPitchData(data?.pitcher?.pitcher ?? []);
-        setBattedBall(
-          data?.batter?.batter ?? { left: 0, center: 0, right: 0 },
-        );
+    const start = () => {
+      fetchData();
+      intervalId = setInterval(fetchData, 20000);
+    };
 
-        // 타자 시즌
-        const batterStatsSeason: string[] = [
-          '시즌',
-          String(batterSeason.ab ?? 0),
-          String(batterSeason.hits ?? 0),
-          String(batterSeason.homeruns ?? 0),
-          (batterSeason.obp ?? 0).toFixed(3),
-          (batterSeason.avg ?? 0).toFixed(3),
-        ];
-
-        // 타자 커리어(최근 3개년)
-        const batterStatsCareer: string[] = [
-          '3시즌',
-          String(batterCareer.ab ?? 0),
-          String(batterCareer.hits ?? 0),
-          String(batterCareer.homeruns ?? 0),
-          (batterCareer.obp ?? 0).toFixed(3),
-          (batterCareer.avg ?? 0).toFixed(3),
-        ];
-
-        // 투수 시즌
-        const pitcherStatsSeason: string[] = [
-          '시즌',
-          String(pitcherSeason.games ?? 0),
-          String(pitcherSeason.innings ?? 0),
-          String(pitcherSeason.wins ?? 0),
-          String(pitcherSeason.losses ?? 0),
-          (pitcherSeason.era ?? 0).toFixed(2),
-        ];
-
-        // 투수 커리어(최근 3개년)
-        const pitcherStatsCareer: string[] = [
-          '3시즌',
-          String(pitcherCareer.games ?? 0),
-          String(pitcherCareer.innings ?? 0),
-          String(pitcherCareer.wins ?? 0),
-          String(pitcherCareer.losses ?? 0),
-          (pitcherCareer.era ?? 0).toFixed(2),
-        ];
-
-        setBatterStats([batterStatsSeason, batterStatsCareer]);
-        setPitcherStats([pitcherStatsSeason, pitcherStatsCareer]);
-      } catch (err) {
-        console.error('실시간 투타 정보 fetch 실패:', err);
+    const stop = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
       }
     };
 
-    fetchData();
-    const interval = setInterval(fetchData, 20000);
-    return () => clearInterval(interval);
-  }, [pitcherPcode, batterPcode]);
+    const onChange = (next: AppStateStatus) => {
+      if (currentState.match(/inactive|background/) && next === 'active') {
+        start();
+      } else if (next.match(/inactive|background/)) {
+        stop();
+      }
+      currentState = next;
+    };
+
+    const sub = AppState.addEventListener('change', onChange);
+    start();
+
+    return () => {
+      sub.remove();
+      stop();
+    };
+  }, [pitcherPcode, batterPcode, fetchData]);
 
   const topPitches = pitchData
     .filter((p) => p?.type && typeof p?.rate === 'number')
-    .sort((a, b) => (b.rate as number) - (a.rate as number))
+    .sort((a, b) => b.rate - a.rate)
     .slice(0, 2);
 
   const directionMap = { left: '좌', center: '중', right: '우' } as const;
   const topDirectionKey = (Object.entries(battedBall) as [keyof typeof directionMap, number][])
-    .reduce<[keyof typeof directionMap, number]>(
-      (max, cur) => (cur[1] > max[1] ? cur : max),
-      ['left', -Infinity],
-    )[0];
+    .reduce((max, cur) => (cur[1] > max[1] ? cur : max), ['left', -Infinity])[0];
   const topDirection = directionMap[topDirectionKey] ?? '-';
 
   const batterTeamId = currentHalf === 'top' ? awayTeam : homeTeam;
   const pitcherTeamId = currentHalf === 'top' ? homeTeam : awayTeam;
 
-  const batterImage =
-    teamSymbolMap[batterTeamId.toLowerCase()] ??
-    require('../../assets/app_logos/ballrae_logo_green.png');
-  const pitcherImage =
-    teamSymbolMap[pitcherTeamId.toLowerCase()] ??
-    require('../../assets/app_logos/ballrae_logo_green.png');
+  const batterImage = teamSymbolMap[batterTeamId.toLowerCase()];
+  const pitcherImage = teamSymbolMap[pitcherTeamId.toLowerCase()];
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -141,70 +175,58 @@ const PlayerInfoBoard = ({
       <View style={styles.section}>
         <Image source={pitcherImage} style={styles.playerImage} />
         <View style={styles.infoBox}>
-          <View style={styles.nameRow}>
-            <Text style={styles.playerName}>{String(pitcherName ?? '-')}</Text>
-          </View>
-          <Text style={styles.pitchCount}>-</Text>
+          <Text style={styles.playerName}>{pitcherName ?? '-'}</Text>
+          <Text style={styles.pitchCount}>{Number(pitcherToday.pitches) || 0}구</Text>
           <Text style={styles.statLine}>
-            이닝 <Text style={styles.statValue}>{String(0)}</Text> | 탈삼진{' '}
-            <Text style={styles.statValue}>{String(0)}</Text> | 실점{' '}
-            <Text style={styles.statValue}>{String(0)}</Text>
+            이닝 <Text style={styles.statValue}>{pitcherToday.innings}</Text> | 탈삼진{' '}
+            <Text style={styles.statValue}>{pitcherToday.strikeouts}</Text> | 실점{' '}
+            <Text style={styles.statValue}>{pitcherToday.runs}</Text>
           </Text>
           <Text style={styles.statLine}>
-            피안타 <Text style={styles.statValue}>{String(0)}</Text> | 투구수{' '}
-            <Text style={styles.statValue}>{String(0)}</Text>
+            피안타 <Text style={styles.statValue}>{pitcherToday.hits}</Text> | 투구수{' '}
+            <Text style={styles.statValue}>{pitcherToday.pitches}</Text>
           </Text>
         </View>
         <View style={styles.extraBox}>
           <Text style={styles.extraTitle}>예상 구종</Text>
-          {topPitches.length === 0 ? (
-            <Text style={styles.extraContent}>-</Text>
-          ) : (
-            topPitches.map((p, i) => (
-              <Text key={i} style={styles.extraContent} numberOfLines={1} adjustsFontSizeToFit>
-                {String(p.type)}
+          {topPitches.length > 0 ? (
+            topPitches.map((p, idx) => (
+              <Text key={idx} style={styles.extraContent}>
+                {p.type}
               </Text>
             ))
+          ) : (
+            <Text style={styles.extraContent}>-</Text>
           )}
         </View>
       </View>
 
-      <StatsTable
-        headers={['성적', '경기', '이닝', '승', '패', '평균자책점']}
-        rows={pitcherStats}
-      />
+      <StatsTable headers={['성적', '경기', '이닝', '승', '패', '평균자책점']} rows={pitcherStats} />
 
       {/* 타자 */}
       <View style={styles.section}>
         <Image source={batterImage} style={styles.playerImage} />
         <View style={styles.infoBox}>
-          <View style={styles.nameRow}>
-            <Text style={styles.playerName}>{String(batterName ?? '-')}</Text>
-          </View>
-          <Text style={styles.pitchCount}>-</Text>
+          <Text style={styles.playerName}>{batterName ?? '-'}</Text>
+          <Text style={styles.pitchCount}>{Number(batterToday.ab) || 0}타수 {Number(batterToday.hits) || 0}안타 </Text>
           <Text style={styles.statLine}>
-            타석 <Text style={styles.statValue}>{String(0)}</Text> | 타수{' '}
-            <Text style={styles.statValue}>{String(0)}</Text> | 안타{' '}
-            <Text style={styles.statValue}>{String(0)}</Text> | 득점{' '}
-            <Text style={styles.statValue}>{String(0)}</Text>
+            타석 <Text style={styles.statValue}>{batterToday.pa}</Text> | 타수{' '}
+            <Text style={styles.statValue}>{batterToday.ab}</Text> | 안타{' '}
+            <Text style={styles.statValue}>{batterToday.hits}</Text>
           </Text>
           <Text style={styles.statLine}>
-            타점 <Text style={styles.statValue}>{String(0)}</Text> | 홈런{' '}
-            <Text style={styles.statValue}>{String(0)}</Text> | 볼넷{' '}
-            <Text style={styles.statValue}>{String(0)}</Text> | 삼진{' '}
-            <Text style={styles.statValue}>{String(0)}</Text>
+            홈런 <Text style={styles.statValue}>{batterToday.homeruns}</Text> | 볼넷{' '}
+            <Text style={styles.statValue}>{batterToday.bb}</Text> | 피삼진{' '}
+            <Text style={styles.statValue}>{batterToday.strikeouts}</Text>
           </Text>
         </View>
         <View style={styles.extraBox}>
           <Text style={styles.extraTitle}>예상 타구</Text>
-          <Text style={styles.extraContent}>{String(topDirection)}</Text>
+          <Text style={styles.extraContent}>{topDirection}</Text>
         </View>
       </View>
 
-      <StatsTable
-        headers={['성적', '타수', '안타', '홈런', '출루율', '타율']}
-        rows={batterStats}
-      />
+      <StatsTable headers={['성적', '타수', '안타', '홈런', '출루율', '타율']} rows={batterStats} />
     </ScrollView>
   );
 };
@@ -238,17 +260,14 @@ const StatsTable = ({ headers, rows }: { headers: string[]; rows: string[][] }) 
   </View>
 );
 
-export default PlayerInfoBoard;
-
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 16 },
   title: { fontSize: 20, fontWeight: 'bold', marginBottom: 12, marginTop: 10 },
   section: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
   playerImage: { width: 50, height: 50, resizeMode: 'contain', marginRight: 10 },
   infoBox: { flex: 1 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  playerName: { fontSize: 16, fontWeight: '500', marginRight: 8, marginBottom: 8 },
-  pitchCount: { fontSize: 13, color: '#575757', marginBottom: 10 },
+  playerName: { fontSize: 16, fontWeight: '500', marginBottom: 8 },
+  pitchCount: { fontSize: 13, color: '#575757', marginBottom: 10, fontWeight: 500 },
   statLine: { fontSize: 12, color: '#A5A5A5', marginBottom: 2 },
   statValue: { fontWeight: '600', color: '#A5A5A5' },
   extraBox: {
@@ -291,3 +310,5 @@ const styles = StyleSheet.create({
   headerCell: { backgroundColor: '#d8ebd3' },
   headerText: { fontWeight: 'bold' },
 });
+
+export default PlayerInfoBoard;

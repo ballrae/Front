@@ -5,4 +5,5 @@ RCT_EXTERN_METHOD(saveMessage:(NSString *)message)
 RCT_EXTERN_METHOD(startLiveActivity:(NSString *)message)
 RCT_EXTERN_METHOD(updateLiveActivity:(NSString *)detail)
 RCT_EXTERN_METHOD(endLiveActivity)
+RCT_EXTERN_METHOD(forceEndAllLiveActivities)
 @end
