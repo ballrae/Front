@@ -22,7 +22,9 @@ type LiveTextBroadcastProps = {
   maxInning: number;
   setPitcherId?: (id: number) => void;
   setBatterId?: (id: number) => void;
-  isGameDone?: boolean; 
+  isGameDone?: boolean;
+  cheerSongEnabled?: boolean;
+  setCheerSongEnabled?: (enabled: boolean) => void;
 };
 
 const LiveTextBroadcast = ({
@@ -34,7 +36,9 @@ const LiveTextBroadcast = ({
   maxInning: maxInningProp,
   setPitcherId,
   setBatterId,
-  isGameDone = false,  
+  isGameDone = false,
+  cheerSongEnabled = true,
+  setCheerSongEnabled,
 }: LiveTextBroadcastProps) => {
   const [topData, setTopData] = useState<any[]>([]);
   const [botData, setBotData] = useState<any[]>([]);
@@ -249,9 +253,12 @@ const LiveTextBroadcast = ({
                             </Text>
                           </>
                         ) : (
-                          <Text style={styles.pitchText}>
-                            {p.type || '결과 없음'}
-                          </Text>
+                          // 동그라미로 변환되지 않는 결과는 표시하지 않음
+                          displayCode !== '?' && p.type ? (
+                            <Text style={styles.pitchText}>
+                              {p.type}
+                            </Text>
+                          ) : null
                         )}
                       </View>
                       {isLast && play.final_result.description && (
@@ -326,12 +333,16 @@ const LiveTextBroadcast = ({
       {!isGameDone && (
         <View style={styles.header}>
           <Text style={styles.headerTitle}>문자중계</Text>
-          <View style={styles.updateStatusContainer}>
-            <View style={[styles.statusDot, { backgroundColor: status === 'OK_REALTIME' ? '#4CAF50' : '#FF9800' }]} />
-            <Text style={styles.updateStatusText}>
-              {status === 'OK_REALTIME' ? '실시간' : status === 'OK_ARCHIVED' ? '아카이브' : '대기중'}
-            </Text>
-          </View>
+          {setCheerSongEnabled && (
+            <TouchableOpacity
+              style={[styles.cheerSongToggle, cheerSongEnabled && styles.cheerSongToggleActive]}
+              onPress={() => setCheerSongEnabled(!cheerSongEnabled)}
+            >
+              <Text style={[styles.cheerSongToggleText, cheerSongEnabled && styles.cheerSongToggleTextActive]}>
+                {cheerSongEnabled ? 'ON' : 'OFF'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -402,4 +413,24 @@ const styles = StyleSheet.create({
   halfLabel: { backgroundColor: '#408A21', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, alignSelf: 'flex-start', marginBottom: 25, marginTop: 5 },
   halfLabelText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
   fullresultTextSmall: { fontSize: 10, color: '#408A21' },
+  cheerSongToggle: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#e9ecef',
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+  },
+  cheerSongToggleActive: {
+    backgroundColor: '#9DCC8A',
+    borderColor: '#9DCC8A',
+  },
+  cheerSongToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6c757d',
+  },
+  cheerSongToggleTextActive: {
+    color: '#ffffff',
+  },
 });

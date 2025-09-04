@@ -1,7 +1,7 @@
 // LiveGameScreen.tsx
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
@@ -20,6 +20,7 @@ import axiosInstance from '../utils/axiosInstance';
 import hitEffect from '../assets/effect/hit_effect.json';
 import homerunEffect from '../assets/effect/homerun_effect.json';
 import winEffect from '../assets/effect/win_effect.json';
+import { playCheerSong, stopCheerSong } from '../utils/playCheerSong';
 
 type EffectType = 'HIT' | 'HR_OR_SCORE' | 'WIN';
 
@@ -38,9 +39,11 @@ const LiveGameScreen = () => {
   const [batterPcode, setBatterPcode] = useState<string | null>(null);
   const [pitcherName, setPitcherName] = useState<string | null>(null);
   const [batterName, setBatterName] = useState<string | null>(null);
+  const [actualBatterId, setActualBatterId] = useState<string | null>(null);
   const [currentHalf, setCurrentHalf] = useState<'top' | 'bot'>('top');
   const [maxInning, setMaxInning] = useState(9);
   const { myTeamId } = useMyTeam();
+  const [cheerSongEnabled, setCheerSongEnabled] = useState<boolean>(true);
 
   const addEffectToQueue = useCallback((type: EffectType, id: string) => {
     effectQueueRef.current.push({ type, id });
@@ -77,6 +80,36 @@ const LiveGameScreen = () => {
   const effectsEnabledRef = useRef<boolean>(false); // 최초 진입 시 과거 안타로 효과 재생 방지
   const winEffectTriggeredRef = useRef<boolean>(false); // WIN 효과 중복 트리거 방지
 
+  // 응원가 재생 함수
+  const playCheerSongForPlayer = useCallback((playerId: string) => {
+    if (cheerSongEnabled && playerId) {
+      playCheerSong(playerId);
+    }
+  }, [cheerSongEnabled]);
+
+  // 응원가 토글 변경 시 현재 재생 중인 소리 정리
+  useEffect(() => {
+    if (!cheerSongEnabled) {
+      // OFF로 바뀌면 현재 재생 중인 응원가 즉시 정리
+      stopCheerSong();
+    }
+  }, [cheerSongEnabled]);
+
+  // 화면을 벗어날 때 응원가 정리
+  useEffect(() => {
+    return () => {
+      // 컴포넌트가 언마운트될 때 응원가 정리
+      stopCheerSong();
+    };
+  }, []);
+
+  // 타자 정보가 변경될 때 응원가 재생
+  useEffect(() => {
+    if (actualBatterId && cheerSongEnabled) {
+      playCheerSongForPlayer(actualBatterId);
+    }
+  }, [actualBatterId, cheerSongEnabled]);
+
   const fetchCurrentInning = useCallback(async () => {
     try {
       const triggerFromCompletedAtbat = (
@@ -100,13 +133,13 @@ const LiveGameScreen = () => {
         const isHit = ['안타', '1루타', '2루타', '3루타']
           .some((word) => normalized.includes(word.replace(/\s+/g, '')));
         // 홈인 이벤트를 더 정확하게 감지 (예: "3루주자 노진혁 : 홈인")
-        const isHrOrScore = ['홈런', '득점', '홈인'].some((word) => resultText.includes(word)) || 
-                           resultText.includes('홈인') || 
+        const isHrOrScore = ['홈런', '득점', '홈인'].some((word) => resultText.includes(word)) ||
+                           resultText.includes('홈인') ||
                            (full && full.includes('홈인'));
 
         // 우선순위: HR_OR_SCORE > HIT
         const now = Date.now();
-        
+
         if (isHrOrScore && status !== 'DONE') {
           const effectKey = `${atbatId}_score_${appearance_number}`;
           addEffectToQueue('HR_OR_SCORE', effectKey);
@@ -115,8 +148,6 @@ const LiveGameScreen = () => {
           addEffectToQueue('HIT', effectKey);
         }
       };
-
-      // 경기 종료 상태에서는 기존 상태 그대로 유지
 
       // 연장 이닝(10회, 11회)을 병렬로 확인
       try {
@@ -183,6 +214,10 @@ const LiveGameScreen = () => {
               setBatterPcode(actual_batter.pcode);
               setPitcherName(pitcher.player_name);
               setBatterName(actual_batter.player_name);
+              // 실제 타자 ID 설정
+              if (actual_batter.id) {
+                setActualBatterId(String(actual_batter.id));
+              }
             }
 
             if (score) {
@@ -260,6 +295,10 @@ const LiveGameScreen = () => {
               setBatterPcode(actual_batter.pcode);
               setPitcherName(pitcher.player_name);
               setBatterName(actual_batter.player_name);
+              // 실제 타자 ID 설정
+              if (actual_batter.id) {
+                setActualBatterId(String(actual_batter.id));
+              }
             }
 
             if (score) {
@@ -334,10 +373,10 @@ const LiveGameScreen = () => {
     // 내가 선택한 팀이 이 경기의 홈/원정에 포함되지 않으면 트리거하지 않음
     const isMyTeamsGame = myTeamId === homeTeam || myTeamId === awayTeam;
     if (!isMyTeamsGame) return;
-    
+
     // 이미 WIN 효과가 트리거되었으면 다시 트리거하지 않음
     if (winEffectTriggeredRef.current) return;
-    
+
     const myScore = myTeamId === homeTeam ? homeScore : awayScore;
     const oppScore = myTeamId === homeTeam ? awayScore : homeScore;
     const winKey = `done_${gameId}_${myTeamId}_win`;
@@ -517,6 +556,8 @@ const LiveGameScreen = () => {
             awayTeam={awayTeam}
             maxInning={maxInning}
             isGameDone={status === 'DONE'}
+            cheerSongEnabled={cheerSongEnabled}
+            setCheerSongEnabled={setCheerSongEnabled}
           />
         </View>
       </ScrollView>
