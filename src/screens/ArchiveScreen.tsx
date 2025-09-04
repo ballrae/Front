@@ -30,6 +30,9 @@ import FadeInView from '../components/FadeInView';
 // axiosInstance로 교체
 import axiosInstance from '../utils/axiosInstance';
 
+// LiveActivity 테스트
+import { startLiveActivity, forceEndAllLiveActivities } from '../bridge/SharedData';
+
 interface PlayerMain {
   player: {
     id: number;
@@ -66,6 +69,29 @@ const ArchiveScreen = () => {
   return (
     <FadeInView style={styles.container}>
       <LogoHeader title="기록실" />
+
+      {/* LiveActivity 테스트 버튼 */}
+      <View style={styles.testContainer}>
+        <TouchableOpacity 
+          style={styles.testButton}
+          onPress={() => {
+            console.log('🧪 LiveActivity 테스트 버튼 클릭됨');
+            startLiveActivity("⚾ 경기 시작!");
+          }}
+        >
+          <Text style={styles.testButtonText}>🧪 LiveActivity 테스트</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.testButton, styles.cleanupButton]}
+          onPress={() => {
+            console.log('💥 모든 LiveActivity 강제 정리');
+            forceEndAllLiveActivities();
+          }}
+        >
+          <Text style={styles.testButtonText}>💥 모든 LiveActivity 정리</Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.searchContainer}>
         <SearchIcon width={30} height={30} style={styles.searchIconOutside} />
@@ -200,5 +226,28 @@ const styles = StyleSheet.create({
   },
   bold: {
     fontWeight: 'bold',
+  },
+  testContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  testButton: {
+    backgroundColor: '#408A21',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  testButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  cleanupButton: {
+    backgroundColor: '#FF6B6B', // 빨간색 스타일
+    marginTop: 8,
+  },
+  singleButton: {
+    backgroundColor: '#2196F3', // 파란색 스타일
+    marginTop: 8,
   },
 });

@@ -81,6 +81,7 @@ const PostScreen = () => {
       <FlatList
         data={teams}
         keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
         renderItem={renderTeamItem}
         contentContainerStyle={styles.list}
         ListHeaderComponent={<LogoHeader title="게시판" />}

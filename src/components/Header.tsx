@@ -68,38 +68,39 @@ export default Header;
 
 const styles = StyleSheet.create({
   safeArea: {
-    marginRight:15,
-    marginLeft:2,
+    marginHorizontal: 0,
   },
   container: {
     height: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
   },
   iconWrapper: {
     padding: 6,
+    width: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconPlaceholder: {
-    width: 60,
+    width: 32,
   },
   title: {
-  position: 'absolute',
-  left: 0,
-  right: 0,
-  textAlign: 'center',
-  fontSize: 18,
-  fontWeight: '600',
-  zIndex: -1,
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '600',
   },
   complete: {
     fontSize: 16,
     color: '#408A21',
     fontWeight: '600',
+    marginRight:15,
   },
   write: {
     fontSize: 16,
     color: '#408A21',
     fontWeight: '600',
+    marginRight:15,
   },
 });

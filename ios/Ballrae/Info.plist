@@ -78,5 +78,9 @@
 	<array>
 		<string>INStartWorkoutIntent</string>
 	</array>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
 </dict>
 </plist>

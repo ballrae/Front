@@ -25,17 +25,19 @@ type Props = {
   setSelectedInning: (inning: number) => void;
   homeTeam: string;
   awayTeam: string;
+  pitcherPitchCount?: number;
 };
 
-const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelectedInning, homeTeam, awayTeam }) => {
+const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelectedInning, homeTeam, awayTeam, pitcherPitchCount }) => {
   const [strikeZone, setStrikeZone] = useState<[number, number, number, number]>([3.305, 1.603, 0.75, -0.75]);
   const [pitches, setPitches] = useState<Pitch[]>([]);
   const [defensePositions, setDefensePositions] = useState<DefensePositions>({});
   const [bso, setBso] = useState({ B: 0, S: 0, O: 0 });
-  const [pitchCount, setPitchCount] = useState(0);
   const [inning, setInning] = useState<number | null>(null);
   const [onBase, setOnBase] = useState({ base1: '0', base2: '0', base3: '0' });
+  const [onBaseRunners, setOnBaseRunners] = useState<{ base1?: string; base2?: string; base3?: string }>({});
   const [currentHalf, setCurrentHalf] = useState<'top' | 'bot'>('top');
+  const [currentBatterName, setCurrentBatterName] = useState<string>('');
 
   const fetchData = async () => {
     try {
@@ -63,6 +65,19 @@ const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelected
       setSelectedInning(liveInning);
       setInning(liveInning);
       setOnBase(currentAtbat.on_base ?? { base1: '0', base2: '0', base3: '0' });
+      setCurrentBatterName(currentAtbat.actual_batter?.player_name ?? '');
+
+      const baseNames: { [key: string]: string } = {};
+      ['base1', 'base2', 'base3'].forEach((base) => {
+        const baseValue = currentAtbat.on_base?.[base] ?? '0';
+        if (baseValue !== '0') {
+          const runner = currentData.atbats.find(
+            (ab: any) => ab.bat_order?.toString() === baseValue
+          );
+          baseNames[base] = runner?.actual_batter?.player_name || '주자';
+        }
+      });
+      setOnBaseRunners(baseNames);
 
       const zone = currentAtbat.strike_zone;
       if (Array.isArray(zone) && zone.length === 4) {
@@ -85,7 +100,6 @@ const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelected
             pitchResult: p.pitch_result ?? '기타',
           });
         }
-
         const result = p.pitch_result;
         if (result === '스트라이크' || result === '헛스윙' || result === '파울') {
           if (strike < 2) strike++;
@@ -95,15 +109,12 @@ const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelected
       }
 
       setPitches(parsedPitches);
-      setPitchCount(totalPitches);
       setBso({ B: ball, S: strike, O: Number(currentAtbat.out ?? 0) });
 
-      const positions = detectedHalf === 'top'
-        ? data.defense_positions?.home
-        : data.defense_positions?.away;
+      const positions = detectedHalf === 'top' ? data.defense_positions?.home : data.defense_positions?.away;
       setDefensePositions(positions || {});
     } catch (err) {
-      console.error('❌ API fetch 실패:', err);
+     // console.error('❌ API fetch 실패:', err);
     }
   };
 
@@ -115,42 +126,30 @@ const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelected
 
   const getBaseStyle = (base: 'base1' | 'base2' | 'base3') => {
     const isRunnerOn = onBase[base] !== '0';
-    const basePos =
-      base === 'base1' ? styles.runnerRight :
-      base === 'base2' ? styles.runnerTop :
-      styles.runnerLeft;
-
-    return [
-      styles.baseIcon,
-      basePos,
-      isRunnerOn && styles.runnerFilled,
-    ];
+    const basePos = base === 'base1' ? styles.runnerRight : base === 'base2' ? styles.runnerTop : styles.runnerLeft;
+    return [styles.baseIcon, basePos, isRunnerOn && styles.runnerFilled];
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.diamondView}>
         <View style={{ width: '120%', height: '100%' }}>
-          <BaseballField width="100%" height="100%" defensePositions={defensePositions} />
+          <BaseballField
+            width="100%"
+            height="100%"
+            defensePositions={defensePositions}
+            onBaseRunners={onBaseRunners}
+            currentBatterName={currentBatterName}
+          />
         </View>
       </View>
 
       <View style={styles.rightPanel}>
         <View style={styles.inningAndRunner}>
           <View style={styles.inningBox}>
-            <View
-              style={[
-                styles.triangleUp,
-                currentHalf === 'top' && { borderBottomColor: 'white' },
-              ]}
-            />
+            <View style={[styles.triangleUp, currentHalf === 'top' && { borderBottomColor: 'white' }]} />
             <Text style={styles.inningText}>{inning ?? '-'}</Text>
-            <View
-              style={[
-                styles.triangleDown,
-                currentHalf === 'bot' && { borderTopColor: 'white' },
-              ]}
-            />
+            <View style={[styles.triangleDown, currentHalf === 'bot' && { borderTopColor: 'white' }]} />
           </View>
 
           <View style={styles.runnerBox}>
@@ -169,19 +168,13 @@ const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelected
             <View style={styles.countRow} key={label}>
               <Text style={styles.countLabel}>{label}</Text>
               {Array(max).fill(0).map((_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.countDot,
-                    { backgroundColor: i < count ? color : '#8bb980' },
-                  ]}
-                />
+                <View key={i} style={[styles.countDot, { backgroundColor: i < count ? color : '#8bb980' }]} />
               ))}
             </View>
           ))}
           <View style={styles.countRow}>
             <Text style={styles.countLabel}>P</Text>
-            <Text style={styles.pitchText}>{pitchCount}</Text>
+            <Text style={styles.pitchText}>{typeof pitcherPitchCount === 'number' ? pitcherPitchCount : 0}</Text>
           </View>
         </View>
 
@@ -189,8 +182,8 @@ const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelected
           <StrikeZoneBox
             strikeZone={strikeZone}
             pitches={pitches}
-            width={scale(110)}
-            height={scale(130)}
+            width={scale(125)}
+            height={scale(140)}
           />
         </View>
       </View>
@@ -199,6 +192,7 @@ const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelected
 };
 
 export default FieldStatusBoard;
+
 
 const styles = StyleSheet.create({
   container: {
