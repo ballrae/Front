@@ -43,9 +43,23 @@
 		<false/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>3.16.129.16</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>INStartWorkoutIntent</string>
+	</array>
 	<key>NSWidgetHosting</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -64,11 +78,6 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>NSUserActivityTypes</key>
-	<array>
-		<string>INStartWorkoutIntent</string>
-	</array>
-	
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 </dict>
