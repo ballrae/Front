@@ -13,8 +13,9 @@ import LogoHeader from '../components/LogoHeader';
 import FadeInView from '../components/FadeInView';
 import teamNameMap from '../constants/teamNames';
 import teamLogoMap from '../constants/teamLogos';
-import { useMyTeam } from '../hooks/useMyTeam';
 import homerunEffect from '../assets/effect/homerun_effect.json';
+import { startGameLiveActivity, updateGameLiveActivity, endLiveActivity } from '../bridge/SharedData';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 LocaleConfig.locales['ko'] = {
   monthNames: [...Array(12).keys()].map((i) => `${i + 1}월`),
@@ -40,6 +41,7 @@ const getTodayDateStr = () => {
   return `${yyyy}${mm}${dd}`;
 };
 
+
 interface Game {
   id: string;
   homeTeam: string;
@@ -58,14 +60,159 @@ const HomeScreen = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [selectedDate, setSelectedDate] = useState(getTodayDateStr());
   const [showCalendar, setShowCalendar] = useState(false);
-  const { myTeamId } = useMyTeam();
   const prevScoreMapRef = useRef<Record<string, number>>({}); // gameId -> my팀 스코어
   const lastTriggeredRef = useRef<string>('');
   const [showScoreEffect, setShowScoreEffect] = useState(false);
   const hasShownEffectRef = useRef<boolean>(false); // 이팩트를 이미 보여줬는지 체크
+  const [activeLiveActivity, setActiveLiveActivity] = useState<string | null>(null); // 현재 활성화된 라이브 액티비티 게임 ID
+  const prevGameStatusRef = useRef<Record<string, string>>({}); // gameId -> 이전 상태
+  const appState = useRef(AppState.currentState);
+  const lastLiveActivityCheckRef = useRef<string>(''); // 마지막 체크한 게임 ID
+  const lastLiveActivityTimeRef = useRef<number>(0); // 마지막 라이브액티비티 시작 시간
+
+  // 현재 이닝 정보를 가져오는 함수
+  const fetchCurrentInningInfo = async (gameId: string) => {
+    try {
+      // 1회부터 9회까지 확인해서 진행 중인 이닝 찾기
+      for (let inning = 1; inning <= 9; inning++) {
+        const res = await axiosInstance.get(`/api/games/${gameId}/relay/${inning}/`);
+        const data = res.data?.data;
+        const top = data.top?.atbats ?? [];
+        const bot = data.bot?.atbats ?? [];
+        
+        const isOngoing = [...top, ...bot].some((ab: any) => ab.full_result === '(진행 중)');
+        if (isOngoing) {
+          const ongoingAtbat = [...top, ...bot].find((ab: any) => ab.full_result === '(진행 중)');
+          const isTop = top.includes(ongoingAtbat);
+          const half = isTop ? '초' : '말';
+          
+          return {
+            inning: inning,
+            half: half,
+            pitcher: ongoingAtbat?.pitcher?.player_name || '투수',
+            batter: ongoingAtbat?.actual_batter?.player_name || '타자'
+          };
+        }
+      }
+      return null;
+    } catch (err) {
+      console.error('현재 이닝 정보 가져오기 실패:', err);
+      return null;
+    }
+  };
+
+  // 라이브 액티비티 체크 함수 (분리)
+  const checkAndStartLiveActivity = useCallback(async (parsedGames: Game[]) => {
+    try {
+      const myTeamId = await AsyncStorage.getItem('myTeamId');
+      if (!myTeamId) return;
+
+      console.log("🔍 마이팀 ID:", myTeamId);
+      console.log("🔍 전체 경기 수:", parsedGames.length);
+      
+      // 마이팀의 라이브 경기만 감지 (LiveGameScreen과 동일한 로직)
+      const myTeamLiveGame = parsedGames.find((g: Game) => {
+        const isMyTeamsGame = g.homeTeam === myTeamId || g.awayTeam === myTeamId;
+        return g.status === 'LIVE' && isMyTeamsGame;
+      });
+
+      console.log("🔍 마이팀 라이브 경기:", myTeamLiveGame ? `${myTeamLiveGame.homeTeamName} vs ${myTeamLiveGame.awayTeamName}` : "없음");
+
+      // 중복 체크: 같은 게임이면 스킵
+      const currentGameId = myTeamLiveGame?.id || 'none';
+      const now = Date.now();
+      const timeSinceLastCheck = now - lastLiveActivityTimeRef.current;
+      
+      if (lastLiveActivityCheckRef.current === currentGameId && timeSinceLastCheck < 30000) { // 30초 내에 같은 게임이면 스킵
+        console.log("⏭️ 같은 게임이므로 라이브액티비티 체크 스킵 (30초 내)");
+        return;
+      }
+      
+      lastLiveActivityCheckRef.current = currentGameId;
+      lastLiveActivityTimeRef.current = now;
+
+      if (myTeamLiveGame) {
+        // 라이브 액티비티가 아직 시작되지 않았거나 다른 경기인 경우
+        if (!activeLiveActivity || activeLiveActivity !== myTeamLiveGame.id) {
+          console.log("🚀 새로운 라이브 액티비티 시작!");
+          
+          // 기존 라이브 액티비티 종료
+          if (activeLiveActivity) {
+            console.log("🛑 기존 라이브 액티비티 종료");
+            endLiveActivity();
+          }
+
+          // 현재 이닝 정보 가져오기
+          const currentInningInfo = await fetchCurrentInningInfo(myTeamLiveGame.id);
+          
+          // 새로운 라이브 액티비티 시작
+          const isMyTeamHome = myTeamLiveGame.homeTeam === myTeamId;
+          const myTeamName = isMyTeamHome ? myTeamLiveGame.homeTeamName : myTeamLiveGame.awayTeamName;
+          const oppTeamName = isMyTeamHome ? myTeamLiveGame.awayTeamName : myTeamLiveGame.homeTeamName;
+          
+          const inningText = currentInningInfo ? `${currentInningInfo.inning}회 ${currentInningInfo.half}` : "1회 초";
+          const playerText = currentInningInfo ? `${currentInningInfo.pitcher} vs ${currentInningInfo.batter}` : "투수 vs 타자";
+          
+          const gameMessage = `⚾ ${myTeamName} vs ${oppTeamName}\n📊 ${myTeamLiveGame.awayScore || 0} : ${myTeamLiveGame.homeScore || 0}\n🏟️ ${inningText} | ${playerText}`;
+
+              startGameLiveActivity({
+                gameId: myTeamLiveGame.id,
+                homeTeamName: myTeamLiveGame.homeTeamName,
+                awayTeamName: myTeamLiveGame.awayTeamName,
+                homeScore: myTeamLiveGame.homeScore || 0,
+                awayScore: myTeamLiveGame.awayScore || 0,
+                inning: currentInningInfo?.inning?.toString() || "1",
+                half: currentInningInfo?.half || "초",
+                homePlayer: currentInningInfo?.pitcher || "투수",
+                awayPlayer: currentInningInfo?.batter || "타자",
+                gameMessage: gameMessage,
+                isLive: true
+              });
+          setActiveLiveActivity(myTeamLiveGame.id);
+          console.log("🏟️ 마이팀 라이브 경기 감지! 라이브 액티비티 시작:", myTeamLiveGame.id);
+        } else {
+          console.log("🔄 기존 라이브 액티비티 업데이트");
+          // 기존 라이브 액티비티 업데이트
+          const isMyTeamHome = myTeamLiveGame.homeTeam === myTeamId;
+          const myTeamName = isMyTeamHome ? myTeamLiveGame.homeTeamName : myTeamLiveGame.awayTeamName;
+          const oppTeamName = isMyTeamHome ? myTeamLiveGame.awayTeamName : myTeamLiveGame.homeTeamName;
+          
+          const currentInningInfo = await fetchCurrentInningInfo(myTeamLiveGame.id);
+          const inningText = currentInningInfo ? `${currentInningInfo.inning}회 ${currentInningInfo.half}` : "1회 초";
+          const playerText = currentInningInfo ? `${currentInningInfo.pitcher} vs ${currentInningInfo.batter}` : "투수 vs 타자";
+          
+          const gameMessage = `⚾ ${myTeamName} vs ${oppTeamName}\n📊 ${myTeamLiveGame.awayScore || 0} : ${myTeamLiveGame.homeScore || 0}\n🏟️ ${inningText} | ${playerText}`;
+
+              updateGameLiveActivity({
+                homeScore: myTeamLiveGame.homeScore || 0,
+                awayScore: myTeamLiveGame.awayScore || 0,
+                inning: currentInningInfo?.inning?.toString() || "1",
+                half: currentInningInfo?.half || "초",
+                homePlayer: currentInningInfo?.pitcher || "투수",
+                awayPlayer: currentInningInfo?.batter || "타자",
+                gameMessage: gameMessage,
+                isLive: true
+              });
+        }
+      } else {
+        // 마이팀 라이브 경기가 없으면 라이브 액티비티 종료
+        if (activeLiveActivity) {
+          console.log("🛑 마이팀 라이브 경기 없음! 라이브 액티비티 종료");
+          endLiveActivity();
+          setActiveLiveActivity(null);
+        }
+      }
+    } catch (err) {
+      console.error('라이브 액티비티 체크 실패:', err);
+    }
+  }, [activeLiveActivity]);
 
   const fetchGames = useCallback(async () => {
     try {
+      // AsyncStorage에서 직접 마이팀 불러오기
+      const myTeamId = await AsyncStorage.getItem('myTeamId');
+      console.log("🔍 fetchGames에서 직접 마이팀 불러오기:", myTeamId);
+      
       const res = await axiosInstance.get(`/api/games/gamelist/${selectedDate}`);
       const json = res.data;
 
@@ -126,6 +273,20 @@ const HomeScreen = () => {
             hasShownEffectRef.current = true; // 이팩트를 보여줬다고 표시
           }
         }
+
+        // 현재 경기 상태를 이전 상태로 저장
+        if (myTeamId) {
+          parsedGames.forEach((g: Game) => {
+            if (g.homeTeam === myTeamId || g.awayTeam === myTeamId) {
+              prevGameStatusRef.current[g.id] = g.status;
+            }
+          });
+          
+          // 라이브 액티비티 체크 (마이팀이 있을 때만)
+          checkAndStartLiveActivity(parsedGames);
+        } else {
+          console.log("❌ 마이팀이 설정되지 않음");
+        }
       }
     } catch (err) {
       console.error('경기 데이터 불러오기 실패:', err);
@@ -136,6 +297,7 @@ const HomeScreen = () => {
   useEffect(() => {
     fetchGames();
   }, [fetchGames]);
+
 
   // 화면 포커스 시 최신화
   useFocusEffect(
@@ -154,9 +316,9 @@ const HomeScreen = () => {
     return () => sub.remove();
   }, [fetchGames]);
 
-  // 5분 간격 폴링 (화면이 켜져 있을 때만)
+  // 5분 간격 폴링 (화면이 켜져 있을 때만) - 라이브액티비티 중복 방지를 위해 간격 증가
   useEffect(() => {
-    const FIVE_MIN = 3 * 60 * 1000;
+    const FIVE_MIN = 5 * 60 * 1000; // 3분에서 5분으로 증가
     const id = setInterval(fetchGames, FIVE_MIN);
     return () => clearInterval(id);
   }, [fetchGames]);
@@ -177,6 +339,7 @@ const HomeScreen = () => {
       <TouchableOpacity onPress={() => setShowCalendar(true)}>
         <LogoHeader title="최근 경기" />
       </TouchableOpacity>
+
 
       <Modal
         visible={showCalendar}

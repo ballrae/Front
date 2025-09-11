@@ -1,9 +1,12 @@
 // PlayerInfoBoard.tsx
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, AppState, AppStateStatus } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, AppState, AppStateStatus, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import teamSymbolMap from '../../constants/teamSymbols';
 import axiosInstance from '../../utils/axiosInstance';
+import { RootStackParamList } from '../../navigation/RootStackParamList';
 
 interface Props {
   pitcherPcode: string | null;
@@ -26,6 +29,22 @@ const PlayerInfoBoard = ({
   currentHalf = 'top',
   onPitchCountUpdate,
 }: Props) => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  
+  // pcode를 id로 변환하는 함수
+  const getPlayerIdFromPcode = useCallback(async (pcode: string, isPitcher: boolean) => {
+    try {
+      const endpoint = isPitcher ? '/api/players/pitcher/' : '/api/players/batter/';
+      const res = await axiosInstance.get(endpoint, {
+        params: { pcode: pcode }
+      });
+      return res.data.data?.player?.id;
+    } catch (error) {
+      console.error('선수 ID 조회 실패:', error);
+      return null;
+    }
+  }, []);
+
   const [pitchData, setPitchData] = useState<any[]>([]);
   const [battedBall, setBattedBall] = useState({ left: 0, center: 0, right: 0 });
   const [pitcherStats, setPitcherStats] = useState<string[][]>([
@@ -172,7 +191,20 @@ const PlayerInfoBoard = ({
       <Text style={styles.title}>투타정보</Text>
 
       {/* 투수 */}
-      <View style={styles.section}>
+      <TouchableOpacity 
+        style={styles.section}
+        onPress={async () => {
+          if (pitcherPcode) {
+            const playerId = await getPlayerIdFromPcode(pitcherPcode, true);
+            if (playerId) {
+              navigation.navigate('PitcherDetailScreen', { playerId: playerId });
+            } else {
+              console.error('투수 ID를 찾을 수 없습니다:', pitcherPcode);
+            }
+          }
+        }}
+        disabled={!pitcherPcode}
+      >
         <Image source={pitcherImage} style={styles.playerImage} />
         <View style={styles.infoBox}>
           <Text style={styles.playerName}>{pitcherName ?? '-'}</Text>
@@ -199,12 +231,25 @@ const PlayerInfoBoard = ({
             <Text style={styles.extraContent}>-</Text>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
 
       <StatsTable headers={['성적', '경기', '이닝', '승', '패', '평균자책점']} rows={pitcherStats} />
 
       {/* 타자 */}
-      <View style={styles.section}>
+      <TouchableOpacity 
+        style={styles.section}
+        onPress={async () => {
+          if (batterPcode) {
+            const playerId = await getPlayerIdFromPcode(batterPcode, false);
+            if (playerId) {
+              navigation.navigate('BatterDetailScreen', { playerId: playerId });
+            } else {
+              console.error('타자 ID를 찾을 수 없습니다:', batterPcode);
+            }
+          }
+        }}
+        disabled={!batterPcode}
+      >
         <Image source={batterImage} style={styles.playerImage} />
         <View style={styles.infoBox}>
           <Text style={styles.playerName}>{batterName ?? '-'}</Text>
@@ -224,7 +269,7 @@ const PlayerInfoBoard = ({
           <Text style={styles.extraTitle}>예상 타구</Text>
           <Text style={styles.extraContent}>{topDirection}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       <StatsTable headers={['성적', '타수', '안타', '홈런', '출루율', '타율']} rows={batterStats} />
     </ScrollView>
@@ -263,7 +308,14 @@ const StatsTable = ({ headers, rows }: { headers: string[]; rows: string[][] }) 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 16 },
   title: { fontSize: 20, fontWeight: 'bold', marginBottom: 12, marginTop: 10 },
-  section: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  section: { 
+    flexDirection: 'row', 
+    alignItems: 'flex-start', 
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+  },
   playerImage: { width: 50, height: 50, resizeMode: 'contain', marginRight: 10 },
   infoBox: { flex: 1 },
   playerName: { fontSize: 16, fontWeight: '500', marginBottom: 8 },

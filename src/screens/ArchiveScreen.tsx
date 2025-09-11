@@ -30,8 +30,6 @@ import FadeInView from '../components/FadeInView';
 // axiosInstance
 import axiosInstance from '../utils/axiosInstance';
 
-// ✅ LiveActivity 테스트
-import { startLiveActivity } from '../bridge/SharedData';
 
 interface PlayerMain {
   player: {
@@ -69,19 +67,6 @@ const ArchiveScreen = () => {
   return (
     <FadeInView style={styles.container}>
       <LogoHeader title="기록실" />
-
-      {/* ✅ LiveActivity 시작 버튼 하나만 */}
-      <View style={styles.testContainer}>
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={() => {
-            console.log('✅ LiveActivity 테스트 시작');
-            startLiveActivity("📣 기록실에서 시작!");
-          }}
-        >
-          <Text style={styles.testButtonText}>✅ LiveActivity 시작</Text>
-        </TouchableOpacity>
-      </View>
 
       <View style={styles.searchContainer}>
         <SearchIcon width={30} height={30} style={styles.searchIconOutside} />

@@ -9,11 +9,18 @@ export const useMyTeam = () => {
 
   const loadMyTeam = async () => {
     try {
+      console.log("🔍 useMyTeam: 마이팀 불러오기 시작");
       const stored = await AsyncStorage.getItem(MY_TEAM_KEY);
+      console.log("🔍 useMyTeam: AsyncStorage에서 마이팀 불러오기:", stored);
+      
+      // 상태를 동시에 업데이트
       setMyTeamId(stored);
+      setLoading(false);
+      
+      console.log("🔍 useMyTeam: myTeamId 상태 설정 완료:", stored);
+      console.log("🔍 useMyTeam: 로딩 완료");
     } catch (e) {
-      console.error('마이팀 불러오기 실패:', e);
-    } finally {
+      console.error('useMyTeam: 마이팀 불러오기 실패:', e);
       setLoading(false);
     }
   };

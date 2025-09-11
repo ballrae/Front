@@ -79,14 +79,62 @@ struct LockScreenWidgetView: View {
     var entry: LockEntry
 
     var body: some View {
-        Text(entry.message)
-            .font(.headline)
-            .bold()
-            .foregroundColor(.white)
-      //해당 코드로 이슈 해결
-            .containerBackground(for: .widget) {
-              Color.black // ✅ 배경색 설정
+        VStack(spacing: 8) {
+            // 스코어 섹션
+            HStack(spacing: 16) {
+                // 원정팀
+                VStack(spacing: 2) {
+                    Circle()
+                        .fill(Color.blue)
+                        .frame(width: 24, height: 24)
+                        .overlay(
+                            Text("A")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white)
+                        )
+                    Text("2")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
+                }
+                
+                Text(":")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
+                
+                // 홈팀
+                VStack(spacing: 2) {
+                    Circle()
+                        .fill(Color.red)
+                        .frame(width: 24, height: 24)
+                        .overlay(
+                            Text("H")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white)
+                        )
+                    Text("0")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
+                }
             }
+            
+            // 이닝 표시
+            Text("1회 초")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(Color(red: 0.25, green: 0.54, blue: 0.13))
+                )
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(Color(red: 0.78, green: 0.88, blue: 0.74)) // C7E0BC
+        .cornerRadius(12)
+        .containerBackground(for: .widget) {
+            Color.clear
+        }
     }
 }
 

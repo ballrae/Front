@@ -61,3 +61,71 @@ export function saveMessageToWidget(message: string) {
     SharedDataBridge?.saveMessage(message);
   }
 }
+
+export function startGameLiveActivity(gameData: {
+  gameId: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeScore: number;
+  awayScore: number;
+  inning: string;
+  half: string;
+  homePlayer: string;
+  awayPlayer: string;
+  gameMessage: string;
+  isLive: boolean;
+}) {
+  if (Platform.OS === 'android') {
+    // Android는 아직 구현 안됨
+    console.log("Android Game Live Activity not implemented yet");
+  } else {
+    if (SharedDataBridge?.startGameLiveActivity) {
+      SharedDataBridge.startGameLiveActivity(
+        gameData.gameId,
+        gameData.homeTeamName,
+        gameData.awayTeamName,
+        gameData.homeScore,
+        gameData.awayScore,
+        gameData.inning,
+        gameData.half,
+        gameData.homePlayer,
+        gameData.awayPlayer,
+        gameData.gameMessage,
+        gameData.isLive
+      );
+    } else {
+      console.warn("🚨 startGameLiveActivity is not defined on SharedDataBridge");
+    }
+  }
+}
+
+export function updateGameLiveActivity(gameData: {
+  homeScore: number;
+  awayScore: number;
+  inning: string;
+  half: string;
+  homePlayer: string;
+  awayPlayer: string;
+  gameMessage: string;
+  isLive: boolean;
+}) {
+  if (Platform.OS === 'android') {
+    // Android는 아직 구현 안됨
+    console.log("Android Game Live Activity update not implemented yet");
+  } else {
+    if (SharedDataBridge?.updateGameLiveActivity) {
+      SharedDataBridge.updateGameLiveActivity(
+        gameData.homeScore,
+        gameData.awayScore,
+        gameData.inning,
+        gameData.half,
+        gameData.homePlayer,
+        gameData.awayPlayer,
+        gameData.gameMessage,
+        gameData.isLive
+      );
+    } else {
+      console.warn("🚨 updateGameLiveActivity is not defined on SharedDataBridge");
+    }
+  }
+}
