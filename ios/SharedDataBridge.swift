@@ -63,19 +63,19 @@ class SharedDataBridge: NSObject {
     }
   }
   
-  @objc
+  @objc(startGameLiveActivity:homeTeamName:awayTeamName:homeScore:awayScore:inning:half:homePlayer:awayPlayer:gameMessage:isLive:)
   func startGameLiveActivity(
     _ gameId: String,
-    homeTeamName: String,
-    awayTeamName: String,
-    homeScore: NSNumber,
-    awayScore: NSNumber,
-    inning: String,
-    half: String,
-    homePlayer: String,
-    awayPlayer: String,
-    gameMessage: String,
-    isLive: Bool
+    _ homeTeamName: String,
+    _ awayTeamName: String,
+    _ homeScore: NSNumber,
+    _ awayScore: NSNumber,
+    _ inning: String,
+    _ half: String,
+    _ homePlayer: String,
+    _ awayPlayer: String,
+    _ gameMessage: String,
+    _ isLive: Bool
   ) {
     let attributes = BallraeAttributes(
       gameId: gameId,
@@ -128,16 +128,16 @@ class SharedDataBridge: NSObject {
     }
   }
   
-  @objc
+  @objc(updateGameLiveActivity:awayScore:inning:half:homePlayer:awayPlayer:gameMessage:isLive:)
   func updateGameLiveActivity(
-    homeScore: NSNumber,
-    awayScore: NSNumber,
-    inning: String,
-    half: String,
-    homePlayer: String,
-    awayPlayer: String,
-    gameMessage: String,
-    isLive: Bool
+    _ homeScore: NSNumber,
+    _ awayScore: NSNumber,
+    _ inning: String,
+    _ half: String,
+    _ homePlayer: String,
+    _ awayPlayer: String,
+    _ gameMessage: String,
+    _ isLive: Bool
   ) {
     Task {
       if let activity = Activity<BallraeAttributes>.activities.first {
