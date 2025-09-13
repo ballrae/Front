@@ -30,6 +30,9 @@ import FadeInView from '../components/FadeInView';
 // axiosInstance
 import axiosInstance from '../utils/axiosInstance';
 
+// 라이브 액티비티 테스트
+import { startGameLiveActivity, endLiveActivity } from '../bridge/SharedData';
+
 
 interface PlayerMain {
   player: {
@@ -49,6 +52,7 @@ interface PlayerMain {
 const ArchiveScreen = () => {
   const [search, setSearch] = useState('');
   const [players, setPlayers] = useState<PlayerMain[]>([]);
+  const [isLiveActivityActive, setIsLiveActivityActive] = useState(false);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
@@ -64,9 +68,46 @@ const ArchiveScreen = () => {
 
   const filteredPlayers = filterPlayers(players, search);
 
+  // 라이브 액티비티 테스트 함수
+  const toggleLiveActivity = () => {
+    if (isLiveActivityActive) {
+      endLiveActivity();
+      setIsLiveActivityActive(false);
+      console.log('라이브 액티비티 종료');
+    } else {
+      startGameLiveActivity({
+        gameId: 'TEST_GAME_001',
+        homeTeamName: 'LT',
+        awayTeamName: 'HH',
+        homeScore: 5,
+        awayScore: 3,
+        inning: '7',
+        half: '초',
+        homePlayer: '최민석',
+        awayPlayer: '임정호',
+        gameMessage: '⚾ 롯데 vs 한화\n📊 3 : 5\n🏟️ 7회 초 | 최민석 vs 임정호',
+        isLive: true
+      });
+      setIsLiveActivityActive(true);
+      console.log('라이브 액티비티 시작');
+    }
+  };
+
   return (
     <FadeInView style={styles.container}>
       <LogoHeader title="기록실" />
+
+      {/* 라이브 액티비티 테스트 버튼 */}
+      <View style={styles.testContainer}>
+        <TouchableOpacity 
+          style={[styles.testButton, isLiveActivityActive && styles.testButtonActive]} 
+          onPress={toggleLiveActivity}
+        >
+          <Text style={styles.testButtonText}>
+            {isLiveActivityActive ? '라이브 액티비티 종료' : '라이브 액티비티 시작'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.searchContainer}>
         <SearchIcon width={30} height={30} style={styles.searchIconOutside} />
@@ -148,15 +189,24 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   testButton: {
-    backgroundColor: '#6A5ACD',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    backgroundColor: '#408A21',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  testButtonActive: {
+    backgroundColor: '#FF4D4D',
   },
   testButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   searchContainer: {
     flexDirection: 'row',

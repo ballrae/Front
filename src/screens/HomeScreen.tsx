@@ -14,7 +14,7 @@ import FadeInView from '../components/FadeInView';
 import teamNameMap from '../constants/teamNames';
 import teamLogoMap from '../constants/teamLogos';
 import homerunEffect from '../assets/effect/homerun_effect.json';
-import { startGameLiveActivity, updateGameLiveActivity, endLiveActivity } from '../bridge/SharedData';
+import { startGameLiveActivity, updateGameLiveActivity, endLiveActivity, hasActiveLiveActivity, getActiveGameId } from '../bridge/SharedData';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 LocaleConfig.locales['ko'] = {
@@ -80,10 +80,31 @@ const HomeScreen = () => {
       );
 
       if (myTeamLiveGame) {
-        // 새로운 라이브 경기인지 확인
-        if (activeLiveActivity !== myTeamLiveGame.id) {
+        // 기존 라이브 액티비티가 있는지 확인
+        const hasActive = hasActiveLiveActivity();
+        const activeGameId = getActiveGameId();
+        
+        if (hasActive && activeGameId === myTeamLiveGame.id) {
+          // 같은 게임이면 업데이트만
+          const isMyTeamHome = myTeamLiveGame.homeTeam === myTeamId;
+          const myTeamName = isMyTeamHome ? myTeamLiveGame.homeTeamName : myTeamLiveGame.awayTeamName;
+          const oppTeamName = isMyTeamHome ? myTeamLiveGame.awayTeamName : myTeamLiveGame.homeTeamName;
+          
+          const gameMessage = `⚾ ${myTeamName} vs ${oppTeamName}\n📊 ${myTeamLiveGame.awayScore || 0} : ${myTeamLiveGame.homeScore || 0}`;
+
+          updateGameLiveActivity({
+            homeScore: myTeamLiveGame.homeScore || 0,
+            awayScore: myTeamLiveGame.awayScore || 0,
+            inning: "1",
+            half: "초",
+            homePlayer: "투수",
+            awayPlayer: "타자",
+            gameMessage: gameMessage,
+            isLive: true
+          });
+        } else {
           // 기존 라이브 액티비티가 있으면 종료
-          if (activeLiveActivity) {
+          if (hasActive) {
             endLiveActivity();
           }
 
@@ -96,8 +117,8 @@ const HomeScreen = () => {
 
           startGameLiveActivity({
             gameId: myTeamLiveGame.id,
-            homeTeamName: myTeamLiveGame.homeTeamName,
-            awayTeamName: myTeamLiveGame.awayTeamName,
+            homeTeamName: myTeamLiveGame.homeTeam,
+            awayTeamName: myTeamLiveGame.awayTeam,
             homeScore: myTeamLiveGame.homeScore || 0,
             awayScore: myTeamLiveGame.awayScore || 0,
             inning: "1",
@@ -111,7 +132,7 @@ const HomeScreen = () => {
         }
       } else {
         // 마이팀 라이브 경기가 없으면 라이브 액티비티 종료
-        if (activeLiveActivity) {
+        if (hasActiveLiveActivity()) {
           endLiveActivity();
           setActiveLiveActivity(null);
         }

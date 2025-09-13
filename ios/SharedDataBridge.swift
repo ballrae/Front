@@ -6,22 +6,6 @@ import ActivityKit
 class SharedDataBridge: NSObject {
   private let suiteName = "group.com.jihee.ballrae"
   
-  // 팀 이름을 팀 코드로 변환하는 함수
-  private func getTeamCode(from teamName: String) -> String {
-    switch teamName {
-    case "한화": return "HH"
-    case "롯데": return "LT"
-    case "KIA": return "KA"
-    case "KT": return "KT"
-    case "LG": return "LG"
-    case "NC": return "NC"
-    case "SSG": return "SL"
-    case "삼성": return "SS"
-    case "두산": return "DS"
-    case "키움": return "HE"
-    default: return teamName.uppercased()
-    }
-  }
 
   @objc
   func saveMessage(_ message: String) {
@@ -33,34 +17,13 @@ class SharedDataBridge: NSObject {
   }
   
   @objc
-  func startLiveActivity(_ message: String) {
-    let attributes = BallraeAttributes(
-      gameId: "TEST_MESSAGE",
-      homeTeamName: "롯데",
-      awayTeamName: "한화"
-    )
-    let content = BallraeAttributes.ContentState(
-      homeTeam: "LT",
-      awayTeam: "HH",
-      homeScore: 7,
-      awayScore: 5,
-      inning: "7",
-      half: "초",
-      homePlayer: "최민석",
-      awayPlayer: "임정호",
-      gameMessage: "해결사는 역시 박준순!\n답답했던 공격의 물꼬를 트는 결정적인 적시타!",
-      isLive: true
-    )
-
-    do {
-      let activity = try Activity<BallraeAttributes>.request(
-        attributes: attributes,
-        contentState: content
-      )
-      print("✅ Live Activity 등록 성공! ID: \(activity.id)")
-    } catch {
-      print("❌ Live Activity 시작 실패: \(error)")
-    }
+  func hasActiveLiveActivity() -> Bool {
+    return !Activity<BallraeAttributes>.activities.isEmpty
+  }
+  
+  @objc
+  func getActiveGameId() -> String? {
+    return Activity<BallraeAttributes>.activities.first?.attributes.gameId
   }
   
   @objc(startGameLiveActivity:homeTeamName:awayTeamName:homeScore:awayScore:inning:half:homePlayer:awayPlayer:gameMessage:isLive:)
@@ -77,14 +40,18 @@ class SharedDataBridge: NSObject {
     _ gameMessage: String,
     _ isLive: Bool
   ) {
+    print("🔍 팀 ID 직접 사용:")
+    print("  홈팀: '\(homeTeamName)'")
+    print("  원정팀: '\(awayTeamName)'")
+    
     let attributes = BallraeAttributes(
       gameId: gameId,
       homeTeamName: homeTeamName,
       awayTeamName: awayTeamName
     )
     let content = BallraeAttributes.ContentState(
-      homeTeam: getTeamCode(from: homeTeamName),
-      awayTeam: getTeamCode(from: awayTeamName),
+      homeTeam: homeTeamName,
+      awayTeam: awayTeamName,
       homeScore: homeScore.intValue,
       awayScore: awayScore.intValue,
       inning: inning,
@@ -142,8 +109,8 @@ class SharedDataBridge: NSObject {
     Task {
       if let activity = Activity<BallraeAttributes>.activities.first {
         let content = BallraeAttributes.ContentState(
-          homeTeam: getTeamCode(from: activity.attributes.homeTeamName),
-          awayTeam: getTeamCode(from: activity.attributes.awayTeamName),
+          homeTeam: activity.attributes.homeTeamName,
+          awayTeam: activity.attributes.awayTeamName,
           homeScore: homeScore.intValue,
           awayScore: awayScore.intValue,
           inning: inning,

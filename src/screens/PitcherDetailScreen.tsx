@@ -13,6 +13,7 @@ import teamNameMap from '../constants/teamNames';
 import teamSymbols from '../constants/teamSymbols';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 
+import axiosInstance from '../utils/axiosInstance';
 
 
 type PitcherRouteProp = RouteProp<RootStackParamList, 'PitcherDetailScreen'>;
@@ -57,7 +58,8 @@ const PitcherDetailScreen = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get(`http://3.16.129.16:8000/api/players/pitcher/`, {
+    axiosInstance
+    .get(`/api/players/pitcher/`, {
       params: { id: playerId }
     })
       .then(response => {
