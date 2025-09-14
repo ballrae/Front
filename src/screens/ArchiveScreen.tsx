@@ -68,47 +68,9 @@ const ArchiveScreen = () => {
 
   const filteredPlayers = filterPlayers(players, search);
 
-  // 라이브 액티비티 테스트 함수
-  const toggleLiveActivity = () => {
-    if (isLiveActivityActive) {
-      endLiveActivity();
-      setIsLiveActivityActive(false);
-      console.log('라이브 액티비티 종료');
-    } else {
-      startGameLiveActivity({
-        gameId: 'TEST_GAME_001',
-        homeTeamName: 'LT',
-        awayTeamName: 'HH',
-        homeScore: 5,
-        awayScore: 3,
-        inning: '7',
-        half: '초',
-        homePlayer: '최민석',
-        awayPlayer: '임정호',
-        gameMessage: '⚾ 롯데 vs 한화\n📊 3 : 5\n🏟️ 7회 초 | 최민석 vs 임정호',
-        isLive: true
-      });
-      setIsLiveActivityActive(true);
-      console.log('라이브 액티비티 시작');
-    }
-  };
-
   return (
     <FadeInView style={styles.container}>
       <LogoHeader title="기록실" />
-
-      {/* 라이브 액티비티 테스트 버튼 */}
-      <View style={styles.testContainer}>
-        <TouchableOpacity 
-          style={[styles.testButton, isLiveActivityActive && styles.testButtonActive]} 
-          onPress={toggleLiveActivity}
-        >
-          <Text style={styles.testButtonText}>
-            {isLiveActivityActive ? '라이브 액티비티 종료' : '라이브 액티비티 시작'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       <View style={styles.searchContainer}>
         <SearchIcon width={30} height={30} style={styles.searchIconOutside} />
         <View style={styles.searchBox}>

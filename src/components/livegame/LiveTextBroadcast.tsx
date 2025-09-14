@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import teamSymbolMap from '../../constants/teamSymbols';
 import teamNameMap from '../../constants/teamNames';
 import axiosInstance from '../../utils/axiosInstance';
 import mainResultColorMap, { mainresultCodeMap } from '../../constants/mainresultCodeMap';
+import { processRealtimeData } from '../../utils/gameStateManager';
 
 type LiveTextBroadcastProps = {
   gameId: string;
@@ -26,6 +27,7 @@ type LiveTextBroadcastProps = {
   isGameDone?: boolean;
   cheerSongEnabled?: boolean;
   setCheerSongEnabled?: (enabled: boolean) => void;
+  onCommentGenerated?: (comment: string) => void;
 };
 
 const LiveTextBroadcast = ({
@@ -40,6 +42,7 @@ const LiveTextBroadcast = ({
   isGameDone = false,
   cheerSongEnabled = true,
   setCheerSongEnabled,
+  onCommentGenerated,
 }: LiveTextBroadcastProps) => {
   const [topData, setTopData] = useState<any[]>([]);
   const [botData, setBotData] = useState<any[]>([]);
@@ -58,12 +61,22 @@ const LiveTextBroadcast = ({
   const maxInning = Math.max(maxInningFromAPI, maxInningProp || 9);
   const allInnings = Array.from({ length: maxInning }, (_, i) => i + 1);
 
+
   useEffect(() => {
     let intervalId: NodeJS.Timeout | null = null;
 
     const fetchInningData = async (showLoading: boolean) => {
       setError(null);
       if (showLoading) setLoading(true);
+      
+      // 로컬 캐시에서 데이터 확인
+      if (cachedData[selectedInning]) {
+        setTopData(cachedData[selectedInning].top);
+        setBotData(cachedData[selectedInning].bot);
+        setLoading(false);
+        return;
+      }
+      
       try {
         const res = await axiosInstance.get(`/api/games/${gameId}/relay/${selectedInning}/`);
         const raw = res.data;
@@ -84,6 +97,8 @@ const LiveTextBroadcast = ({
         const mapAtBats = (atbats: any[]) =>
           atbats.map((ab: any) => {
             const pitches = isRealtime ? ab.pitch_sequence : ab.pitches;
+            
+            
             return {
               batter: isRealtime ? (typeof ab.actual_batter === 'object' ? String(ab.actual_batter?.player_name || '') : String(ab.actual_batter || '')) : (typeof ab.actual_player === 'object' ? String(ab.actual_player?.player_name || '') : String(ab.actual_player || '')),
               batting_hand: String(ab.batting_hand || ''),
@@ -103,7 +118,7 @@ const LiveTextBroadcast = ({
             };
           });
 
-        // 더 정확한 데이터 변경 감지 - 각 타자의 상세 정보까지 비교
+        // 데이터 변경 감지 (경기 종료 시에는 단순화)
         const topSignature = topAtBats.map((ab: any) => 
           `${ab.actual_batter || ab.actual_player}-${ab.main_result || ''}-${(ab.pitch_sequence || ab.pitches || []).length}-${ab.full_result || ''}`
         ).join('|');
@@ -120,7 +135,7 @@ const LiveTextBroadcast = ({
           const mappedTopData = mapAtBats(topAtBats);
           const mappedBotData = mapAtBats(botAtBats);
           
-          // 데이터를 캐시에 저장
+          // 데이터를 로컬 캐시에 저장
           setCachedData(prev => ({
             ...prev,
             [selectedInning]: {
@@ -132,6 +147,54 @@ const LiveTextBroadcast = ({
           // 현재 선택된 이닝의 데이터만 표시
           setTopData(mappedTopData);
           setBotData(mappedBotData);
+          
+          // 멘트 생성 로직 추가 (경기 종료 시에는 비활성화)
+          if (onCommentGenerated && isRealtime && !isGameDone) {
+            try {
+              // 현재 진행 중인 타석 찾기
+              const currentAtbat = [...topAtBats, ...botAtBats].find(
+                (ab: any) => ab.full_result === '(진행 중)'
+              );
+              
+              if (currentAtbat) {
+                // 현재 공격팀 결정
+                const isTopHalf = topAtBats.some((ab: any) => ab.full_result === '(진행 중)');
+                const attackingTeamName = isTopHalf ? teamNameMap[awayTeam] : teamNameMap[homeTeam];
+                const isHomeTeam = !isTopHalf;
+                
+                // API 데이터를 멘트 생성에 맞는 형태로 변환
+                const apiDataForComment = {
+                  inning: `${selectedInning}회${isTopHalf ? '초' : '말'}`,
+                  half: isTopHalf ? 'top' : 'bot',
+                  score: `${raw.data?.top?.score || 0}:${raw.data?.bot?.score || 0}`,
+                  current_atbat: {
+                    actual_batter: currentAtbat.actual_batter,
+                    pitcher: currentAtbat.pitcher,
+                    main_result: currentAtbat.main_result || '',
+                    on_base: currentAtbat.on_base || { base1: '0', base2: '0', base3: '0' },
+                    outs: currentAtbat.outs || '0사',
+                    strikeout_count: currentAtbat.strikeout_count || '0'
+                  },
+                  game_info: {
+                    inning: selectedInning,
+                    half: isTopHalf ? 'top' : 'bot',
+                    score: `${raw.data?.top?.score || 0}:${raw.data?.bot?.score || 0}`,
+                    outs: currentAtbat.outs || '0'
+                  }
+                };
+                
+                // 멘트 생성
+                const generatedComment = processRealtimeData(apiDataForComment, attackingTeamName, isHomeTeam);
+                
+                if (generatedComment) {
+                  console.log('🔍 LiveTextBroadcast에서 생성된 멘트:', generatedComment);
+                  onCommentGenerated(generatedComment);
+                }
+              }
+            } catch (error) {
+              console.error('멘트 생성 중 오류:', error);
+            }
+          }
           
           // 데이터가 변경되었을 때만 콘솔에 로그 (디버깅용)
          
@@ -169,7 +232,7 @@ const LiveTextBroadcast = ({
     // 초기 1회 호출
     fetchInningData(true);
 
-    // 진행 중일 때만 10초 폴링 (20초에서 10초로 단축)
+    // 진행 중일 때만 10초 폴링
     if (!isGameDone) {
       intervalId = setInterval(() => fetchInningData(false), 10000);
     }
@@ -187,12 +250,30 @@ const LiveTextBroadcast = ({
     }
   }, [selectedInning, cachedData]);
 
-  // 컴포넌트 언마운트 시 인터벌 정리
+  // 캐시 크기 제한 (메모리 누수 방지)
+  useEffect(() => {
+    const cacheKeys = Object.keys(cachedData);
+    if (cacheKeys.length > 10) { // 최대 10개 이닝만 캐시
+      const sortedKeys = cacheKeys.map(Number).sort((a, b) => b - a);
+      const keysToRemove = sortedKeys.slice(10);
+      
+      setCachedData(prev => {
+        const newCache = { ...prev };
+        keysToRemove.forEach(key => {
+          delete newCache[key];
+        });
+        return newCache;
+      });
+    }
+  }, [cachedData]);
+
+  // 컴포넌트 언마운트 시 정리
   useEffect(() => {
     return () => {
-      // 컴포넌트가 언마운트될 때 모든 인터벌 정리
-      // Node.js 환경에서는 모든 인터벌을 정리할 수 없으므로 
-      // 필요한 경우에만 특정 인터벌을 정리
+      // 캐시 정리 (메모리 누수 방지)
+      setCachedData({});
+      setTopData([]);
+      setBotData([]);
     };
   }, []);
 
@@ -223,7 +304,7 @@ const LiveTextBroadcast = ({
     return <Text style={styles.resultText}>{trimmedDesc}</Text>;
   };
 
-  const renderPlay = (plays: any[], isTop: boolean) => {
+  const renderPlay = useCallback((plays: any[], isTop: boolean) => {
     // 현재 이닝의 모든 타석에서 PLI가 있는 타석들의 인덱스를 찾기
     const pliIndices: number[] = [];
     plays.forEach((play, i) => {
@@ -372,7 +453,7 @@ const LiveTextBroadcast = ({
               )}
               
               {/* 각 타석의 승리 확률 표시 */}
-              {play.pli_data && !play.pli_data.error && play.pli_data.pli && currentPli !== null && (
+              {play.pli_data && !play.pli_data.error && play.pli_data.pli && (isGameDone || currentPli !== null) && (
                 <View style={styles.pliContainer}>
                   <Text style={styles.pliText}>
                     {String(teamNameMap[isTop ? String(awayTeam) : String(homeTeam)] || (isTop ? String(awayTeam) : String(homeTeam)))} 승리 확률 {String(currentPli)}%
@@ -392,11 +473,11 @@ const LiveTextBroadcast = ({
         </View>
       );
     });
-  };
+  }, [awayTeam, homeTeam, isGameDone]);
 
   // 무거운 JSX 생성 메모이즈
-  const topPlaysView = useMemo(() => renderPlay(topData, true), [topData, awayTeam, homeTeam]);
-  const botPlaysView = useMemo(() => renderPlay(botData, false), [botData, awayTeam, homeTeam]);
+  const topPlaysView = useMemo(() => renderPlay(topData, true), [topData, renderPlay]);
+  const botPlaysView = useMemo(() => renderPlay(botData, false), [botData, renderPlay]);
 
   return (
     <ScrollView

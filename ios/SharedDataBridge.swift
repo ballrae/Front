@@ -53,6 +53,39 @@ class SharedDataBridge: NSObject {
     print("  홈팀: '\(homeTeamName)'")
     print("  원정팀: '\(awayTeamName)'")
     
+    // 기존 라이브 액티비티가 있는지 확인
+    let existingActivities = Activity<BallraeAttributes>.activities
+    if let existingActivity = existingActivities.first {
+      // 같은 게임 ID인 경우 업데이트만 수행
+      if existingActivity.attributes.gameId == gameId {
+        print("🔄 같은 게임 ID 발견, 업데이트만 수행: \(gameId)")
+        Task {
+          let content = BallraeAttributes.ContentState(
+            homeTeam: homeTeamName,
+            awayTeam: awayTeamName,
+            homeScore: homeScore.intValue,
+            awayScore: awayScore.intValue,
+            inning: inning,
+            half: half,
+            homePlayer: homePlayer,
+            awayPlayer: awayPlayer,
+            gameMessage: gameMessage,
+            isLive: isLive
+          )
+          await existingActivity.update(using: content)
+          print("✅ 기존 라이브 액티비티 업데이트 완료")
+        }
+        return
+      } else {
+        // 다른 게임 ID인 경우 기존 액티비티 종료 후 새로 시작
+        print("🔄 다른 게임 ID 발견, 기존 액티비티 종료 후 새로 시작")
+        Task {
+          await existingActivity.end(using: existingActivity.contentState)
+          print("✅ 기존 라이브 액티비티 종료 완료")
+        }
+      }
+    }
+    
     let attributes = BallraeAttributes(
       gameId: gameId,
       homeTeamName: homeTeamName,
