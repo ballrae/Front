@@ -72,6 +72,14 @@ export function getActiveGameId(): string | null {
   }
 }
 
+export function endAllLiveActivities() {
+  if (SharedDataBridge?.endAllLiveActivities) {
+    SharedDataBridge.endAllLiveActivities();
+  } else {
+    console.warn("🚨 endAllLiveActivities is not defined on SharedDataBridge");
+  }
+}
+
 export function saveMessageToWidget(message: string) {
   if (Platform.OS === 'android') {
     MessageBridge?.saveMessage(message);

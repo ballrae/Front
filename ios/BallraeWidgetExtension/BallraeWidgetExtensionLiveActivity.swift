@@ -31,7 +31,7 @@ struct BallraeLiveActivity: Widget {
                         
                         // 선수명
                         Text(context.state.awayPlayer)
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
                     }
                     
@@ -81,37 +81,45 @@ struct BallraeLiveActivity: Widget {
             // 다이나믹 아일랜드 UI
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    VStack(spacing: 3) {
+                    VStack(spacing: 6) {
                         Image("\(context.state.awayTeam.lowercased())_simbol")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: 24, height: 24)
+                            .frame(width: 36, height: 36)
                       
                         
                         Text(context.state.awayPlayer)
-                            .font(.system(size: 8, weight: .medium))
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 0.78, green: 0.88, blue: 0.74))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 8)
+                    .padding(.trailing, -8)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    VStack(spacing: 3) {
+                    VStack(spacing: 6) {
                         Image("\(context.state.homeTeam.lowercased())_simbol")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: 24, height: 24)
+                            .frame(width: 36, height: 36)
                         
                         
                         Text(context.state.homePlayer)
-                            .font(.system(size: 8, weight: .medium))
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 0.78, green: 0.88, blue: 0.74))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 8)
+                    .padding(.leading, -8)
                 }
                 DynamicIslandExpandedRegion(.center) {
-                    VStack(spacing: 4) {
+                    VStack(spacing: 8) {
                         Text("\(context.state.inning)회 \(context.state.half)")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.white)
@@ -124,17 +132,17 @@ struct BallraeLiveActivity: Widget {
                         
                         HStack(spacing: 80) {
                             Text("\(context.state.awayScore)")
-                                .font(.system(size: 24, weight: .bold))
+                                .font(.system(size: 32, weight: .bold))
                                 .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
                             
                             Text("\(context.state.homeScore)")
-                                .font(.system(size: 24, weight: .bold))
+                                .font(.system(size: 32, weight: .bold))
                                 .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
                         }
                         
                         if !context.state.gameMessage.isEmpty {
                             Text(context.state.gameMessage.components(separatedBy: "\n").first ?? "")
-                                .font(.system(size: 10, weight: .medium))
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
                                 .multilineTextAlignment(.center)
                                 .lineLimit(1)
@@ -143,7 +151,8 @@ struct BallraeLiveActivity: Widget {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(Color(red: 0.78, green: 0.88, blue: 0.74))
+                    .padding(.leading, -8)
+                    .padding(.trailing, -8)
                 }
             } compactLeading: {
                 HStack(spacing: 2) {

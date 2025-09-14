@@ -14,7 +14,7 @@ import FadeInView from '../components/FadeInView';
 import teamNameMap from '../constants/teamNames';
 import teamLogoMap from '../constants/teamLogos';
 import homerunEffect from '../assets/effect/homerun_effect.json';
-import { startGameLiveActivity, updateGameLiveActivity, endLiveActivity, hasActiveLiveActivity, getActiveGameId } from '../bridge/SharedData';
+import { startGameLiveActivity, updateGameLiveActivity, endLiveActivity, hasActiveLiveActivity, getActiveGameId, endAllLiveActivities } from '../bridge/SharedData';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 LocaleConfig.locales['ko'] = {
@@ -80,12 +80,37 @@ const HomeScreen = () => {
       );
 
       if (myTeamLiveGame) {
-        // 기존 라이브 액티비티가 있는지 확인
-        const hasActive = hasActiveLiveActivity();
-        const activeGameId = getActiveGameId();
-        
-        if (hasActive && activeGameId === myTeamLiveGame.id) {
+        // 새로운 라이브 경기인지 확인
+        if (activeLiveActivity !== myTeamLiveGame.id) {
+          // 모든 기존 라이브 액티비티 종료
+          console.log('🔍 모든 기존 라이브 액티비티 종료');
+          endAllLiveActivities();
+
+          // 게임 메시지 생성
+          const isMyTeamHome = myTeamLiveGame.homeTeam === myTeamId;
+          const myTeamName = isMyTeamHome ? myTeamLiveGame.homeTeamName : myTeamLiveGame.awayTeamName;
+          const oppTeamName = isMyTeamHome ? myTeamLiveGame.awayTeamName : myTeamLiveGame.homeTeamName;
+          
+          const gameMessage = `⚾ ${myTeamName} vs ${oppTeamName}\n📊 ${myTeamLiveGame.awayScore || 0} : ${myTeamLiveGame.homeScore || 0}`;
+
+          console.log('🔍 새로운 라이브 액티비티 시작:', myTeamLiveGame.id);
+          startGameLiveActivity({
+            gameId: myTeamLiveGame.id,
+            homeTeamName: myTeamLiveGame.homeTeam,
+            awayTeamName: myTeamLiveGame.awayTeam,
+            homeScore: myTeamLiveGame.homeScore || 0,
+            awayScore: myTeamLiveGame.awayScore || 0,
+            inning: "1",
+            half: "초",
+            homePlayer: "투수",
+            awayPlayer: "타자",
+            gameMessage: gameMessage,
+            isLive: true
+          });
+          setActiveLiveActivity(myTeamLiveGame.id);
+        } else {
           // 같은 게임이면 업데이트만
+          console.log('🔍 같은 게임 업데이트:', myTeamLiveGame.id);
           const isMyTeamHome = myTeamLiveGame.homeTeam === myTeamId;
           const myTeamName = isMyTeamHome ? myTeamLiveGame.homeTeamName : myTeamLiveGame.awayTeamName;
           const oppTeamName = isMyTeamHome ? myTeamLiveGame.awayTeamName : myTeamLiveGame.homeTeamName;
@@ -102,33 +127,6 @@ const HomeScreen = () => {
             gameMessage: gameMessage,
             isLive: true
           });
-        } else {
-          // 기존 라이브 액티비티가 있으면 종료
-          if (hasActive) {
-            endLiveActivity();
-          }
-
-          // 게임 메시지 생성
-          const isMyTeamHome = myTeamLiveGame.homeTeam === myTeamId;
-          const myTeamName = isMyTeamHome ? myTeamLiveGame.homeTeamName : myTeamLiveGame.awayTeamName;
-          const oppTeamName = isMyTeamHome ? myTeamLiveGame.awayTeamName : myTeamLiveGame.homeTeamName;
-          
-          const gameMessage = `⚾ ${myTeamName} vs ${oppTeamName}\n📊 ${myTeamLiveGame.awayScore || 0} : ${myTeamLiveGame.homeScore || 0}`;
-
-          startGameLiveActivity({
-            gameId: myTeamLiveGame.id,
-            homeTeamName: myTeamLiveGame.homeTeam,
-            awayTeamName: myTeamLiveGame.awayTeam,
-            homeScore: myTeamLiveGame.homeScore || 0,
-            awayScore: myTeamLiveGame.awayScore || 0,
-            inning: "1",
-            half: "초",
-            homePlayer: "투수",
-            awayPlayer: "타자",
-            gameMessage: gameMessage,
-            isLive: true
-          });
-          setActiveLiveActivity(myTeamLiveGame.id);
         }
       } else {
         // 마이팀 라이브 경기가 없으면 라이브 액티비티 종료
@@ -214,7 +212,7 @@ const HomeScreen = () => {
         }
       }
     } catch (err) {
-      console.error('경기 데이터 불러오기 실패:', err);
+    
     }
   }, [selectedDate]);
 
@@ -316,18 +314,21 @@ const HomeScreen = () => {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}
-              onPress={() =>
-                navigation.navigate('LiveGameScreen', {
-                  gameId: item.id,
-                  homeTeam: item.homeTeam,
-                  awayTeam: item.awayTeam,
-                  homeTeamName: item.homeTeamName,
-                  awayTeamName: item.awayTeamName,
-                  homeScore: item.homeScore ?? 0,
-                  awayScore: item.awayScore ?? 0,
-                  status: item.status,
-                })
-              }
+              onPress={() => {
+                if (item.status === 'LIVE' || item.status === 'DONE') {
+                  navigation.navigate('LiveGameScreen', {
+                    gameId: item.id,
+                    homeTeam: item.homeTeam,
+                    awayTeam: item.awayTeam,
+                    homeTeamName: item.homeTeamName,
+                    awayTeamName: item.awayTeamName,
+                    homeScore: item.homeScore ?? 0,
+                    awayScore: item.awayScore ?? 0,
+                    status: item.status,
+                  });
+                }
+              }}
+              disabled={item.status === 'SCHEDULED' || item.status === 'CANCELLED'}
             >
               <View style={styles.row}>
                 <View style={styles.teamLeft}>

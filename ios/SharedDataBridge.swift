@@ -26,6 +26,15 @@ class SharedDataBridge: NSObject {
     return Activity<BallraeAttributes>.activities.first?.attributes.gameId
   }
   
+  @objc
+  func endAllLiveActivities() {
+    Task {
+      for activity in Activity<BallraeAttributes>.activities {
+        await activity.end(using: activity.contentState)
+      }
+    }
+  }
+  
   @objc(startGameLiveActivity:homeTeamName:awayTeamName:homeScore:awayScore:inning:half:homePlayer:awayPlayer:gameMessage:isLive:)
   func startGameLiveActivity(
     _ gameId: String,

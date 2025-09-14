@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { pitchResultColorMap, pitchResultTextToCodeMap } from '../../constants/pitchResultMaps';
 import teamSymbolMap from '../../constants/teamSymbols';
+import teamNameMap from '../../constants/teamNames';
 import axiosInstance from '../../utils/axiosInstance';
 import mainResultColorMap, { mainresultCodeMap } from '../../constants/mainresultCodeMap';
 
@@ -48,6 +49,7 @@ const LiveTextBroadcast = ({
   const [maxInningFromAPI, setMaxInningFromAPI] = useState<number>(9);
   const [archivedReady, setArchivedReady] = useState<boolean>(true);
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('');
+  const [cachedData, setCachedData] = useState<{[key: number]: {top: any[], bot: any[]}}>({});
 
   const scrollRef = useRef<ScrollView>(null);
   const currentOffsetRef = useRef<number>(0);
@@ -83,20 +85,21 @@ const LiveTextBroadcast = ({
           atbats.map((ab: any) => {
             const pitches = isRealtime ? ab.pitch_sequence : ab.pitches;
             return {
-              batter: isRealtime ? ab.actual_batter : ab.actual_player,
-              batting_hand: ab.batting_hand || '',
+              batter: isRealtime ? (typeof ab.actual_batter === 'object' ? String(ab.actual_batter?.player_name || '') : String(ab.actual_batter || '')) : (typeof ab.actual_player === 'object' ? String(ab.actual_player?.player_name || '') : String(ab.actual_player || '')),
+              batting_hand: String(ab.batting_hand || ''),
               at_bat: (pitches || []).map((p: any) => ({
-                pitch_num: p.pitch_num,
-                type: p.pitch_result || '',
-                pitch: p.pitch_type || '',
-                velocity: p.speed,
+                pitch_num: String(p.pitch_num || ''),
+                type: String(p.pitch_result || ''),
+                pitch: String(p.pitch_type || ''),
+                velocity: String(p.speed || ''),
                 event: p.event,
               })),
               final_result: {
-                code: mainresultCodeMap(ab.main_result || '') as 'B' | 'H' | 'O' | 'X',
-                description: ab.main_result || '',
+                code: mainresultCodeMap(String(ab.main_result || '')) as 'B' | 'H' | 'O' | 'X',
+                description: String(ab.main_result || ''),
               },
-              full_result: ab.full_result || '',
+              full_result: String(ab.full_result || ''),
+              pli_data: ab.pli_data || null,
             };
           });
 
@@ -114,12 +117,26 @@ const LiveTextBroadcast = ({
         
         if (hasDataChanged) {
           dataSignatureRef.current = nextSignature;
-          setTopData(mapAtBats(topAtBats));
-          setBotData(mapAtBats(botAtBats));
+          const mappedTopData = mapAtBats(topAtBats);
+          const mappedBotData = mapAtBats(botAtBats);
+          
+          // 데이터를 캐시에 저장
+          setCachedData(prev => ({
+            ...prev,
+            [selectedInning]: {
+              top: mappedTopData,
+              bot: mappedBotData
+            }
+          }));
+          
+          // 현재 선택된 이닝의 데이터만 표시
+          setTopData(mappedTopData);
+          setBotData(mappedBotData);
           
           // 데이터가 변경되었을 때만 콘솔에 로그 (디버깅용)
-          console.log(`[LiveTextBroadcast] 데이터 업데이트: ${selectedInning}회, ${isRealtime ? '실시간' : '아카이브'}`);
+         
         }
+
 
         if (setPitcherId && setBatterId) {
           const lastBot = botAtBats[botAtBats.length - 1];
@@ -132,7 +149,7 @@ const LiveTextBroadcast = ({
           }
         }
       } catch (e) {
-        console.error('[LiveTextBroadcast] API 호출 오류:', e);
+
         setError('데이터 요청 중 오류 발생');
         setTopData([]);
         setBotData([]);
@@ -162,6 +179,14 @@ const LiveTextBroadcast = ({
     };
   }, [gameId, selectedInning, isGameDone]);
 
+  // 선택된 이닝이 변경될 때 캐시된 데이터를 사용
+  useEffect(() => {
+    if (cachedData[selectedInning]) {
+      setTopData(cachedData[selectedInning].top);
+      setBotData(cachedData[selectedInning].bot);
+    }
+  }, [selectedInning, cachedData]);
+
   // 컴포넌트 언마운트 시 인터벌 정리
   useEffect(() => {
     return () => {
@@ -176,24 +201,64 @@ const LiveTextBroadcast = ({
 
 
   const renderResultDescription = (desc: string) => {
-    const i = desc.indexOf('(');
+    if (!desc || typeof desc !== 'string') {
+      return <Text style={styles.resultText}>결과 없음</Text>;
+    }
+    
+    const trimmedDesc = desc.trim();
+    if (!trimmedDesc) {
+      return <Text style={styles.resultText}>결과 없음</Text>;
+    }
+    
+    const i = trimmedDesc.indexOf('(');
     if (i !== -1) {
       return (
         <Text style={styles.resultText}>
-          {desc.slice(0, i).trim()}
+          {trimmedDesc.slice(0, i).trim()}
           {'\n'}
-          <Text style={styles.resultTextSmall}>{desc.slice(i).trim()}</Text>
+          <Text style={styles.resultTextSmall}>{trimmedDesc.slice(i).trim()}</Text>
         </Text>
       );
     }
-    return <Text style={styles.resultText}>{desc}</Text>;
+    return <Text style={styles.resultText}>{trimmedDesc}</Text>;
   };
 
-  const renderPlay = (plays: any[], isTop: boolean) =>
-    plays.map((play, i) => {
-      const batterName = typeof play.batter === 'string' ? play.batter : play.batter?.player_name || '알 수 없음';
-      const teamKey = isTop ? awayTeam.toLowerCase() : homeTeam.toLowerCase();
+  const renderPlay = (plays: any[], isTop: boolean) => {
+    // 현재 이닝의 모든 타석에서 PLI가 있는 타석들의 인덱스를 찾기
+    const pliIndices: number[] = [];
+    plays.forEach((play, i) => {
+      if (play.pli_data && !play.pli_data.error && play.pli_data.pli) {
+        pliIndices.push(i);
+      }
+    });
+    
+    return plays.map((play, i) => {
+      const batterName = typeof play.batter === 'string' ? play.batter : String(play.batter?.player_name || '알 수 없음');
+      const teamKey = isTop ? String(awayTeam).toLowerCase() : String(homeTeam).toLowerCase();
       const teamSymbol = teamSymbolMap[teamKey] || require('../../assets/app_logos/ballrae_logo_green.png');
+      
+      // 현재 타석의 PLI 값 계산
+      let currentPli = null;
+      let pliChange = null;
+      
+      if (play.pli_data && !play.pli_data.error && play.pli_data.pli) {
+        currentPli = Math.round(play.pli_data.pli * 100);
+        
+        // 현재 타석이 PLI가 있는 타석 중 몇 번째인지 찾기
+        const currentPliIndex = pliIndices.indexOf(i);
+        
+        // 이전 PLI 값과 비교 (현재 인덱스가 0보다 클 때만)
+        if (currentPliIndex > 0) {
+          const previousPliIndex = pliIndices[currentPliIndex - 1];
+          const previousPlay = plays[previousPliIndex];
+          if (previousPlay && previousPlay.pli_data && !previousPlay.pli_data.error && previousPlay.pli_data.pli) {
+            const previousPli = Math.round(previousPlay.pli_data.pli * 100);
+            if (previousPli !== currentPli) {
+              pliChange = currentPli - previousPli;
+            }
+          }
+        }
+      }
 
       // 경기가 종료되었을 때 완료되지 않은 타자는 표시하지 않음
       if (isGameDone && (!play.at_bat || play.at_bat.length === 0 || !play.final_result.description)) {
@@ -205,23 +270,23 @@ const LiveTextBroadcast = ({
           <Image source={teamSymbol} style={styles.avatar} />
           <View style={styles.infoBox}>
             <Text style={styles.batterName}>
-              {batterName} <Text style={styles.battingHand}>{play.batting_hand}</Text>
+              {batterName} <Text style={styles.battingHand}>{String(play.batting_hand || '')}</Text>
             </Text>
             <View style={styles.pitches}>
               {play.at_bat.map((p: any, idx: number) => {
                 const isLast = idx === play.at_bat.length - 1;
-                const displayCode = pitchResultTextToCodeMap[p.type] || p.type[0] || '?';
-                const circleColor = pitchResultColorMap[p.type] || '#888';
-                const hasPitch = p.pitch?.trim();
-                const eventText = Array.isArray(p.event) ? p.event.join('\n') : (p.event || '');
-                const fullResultRaw = typeof play.full_result === 'string' ? play.full_result : '';
+                const displayCode = pitchResultTextToCodeMap[String(p.type || '')] || (p.type ? String(p.type)[0] : '') || '?';
+                const circleColor = pitchResultColorMap[String(p.type || '')] || '#888';
+                const hasPitch = p.pitch ? String(p.pitch).trim() : '';
+                const eventText = Array.isArray(p.event) ? p.event.join('\n') : (p.event ? String(p.event) : '');
+                const fullResultRaw = typeof play.full_result === 'string' ? play.full_result : String(play.full_result || '');
                 const fullResultHead = fullResultRaw.split('|')[0] || '';
                 const norm = (s: string) => s.replace(/[\s()]/g, '');
                 const isDuplicateEvent = eventText && fullResultHead && (norm(fullResultHead).includes(norm(eventText)) || norm(eventText).includes(norm(fullResultHead)));
 
                 // 이벤트만 있고 아직 투구 정보가 없는 경우: 이벤트만 표시하고 '결과 없음'은 숨김
                 if (!!eventText && !isDuplicateEvent && !hasPitch && !p.type) {
-                  const formattedEvent = eventText.split('|').map((s: string) => s.trim()).join('\n');
+                  const formattedEvent = String(eventText).split('|').map((s: string) => String(s).trim()).join('\n');
                   return (
                     <View key={idx} style={styles.pitchRow}>
                       <View style={styles.leftColumn}>
@@ -236,7 +301,7 @@ const LiveTextBroadcast = ({
                     {!!eventText && !isDuplicateEvent && (
                       <View style={styles.pitchRow}>
                         <View style={styles.leftColumn}>
-                          <Text style={styles.eventText}>{eventText.split('|').map((s: string) => s.trim()).join('\n')}</Text>
+                          <Text style={styles.eventText}>{String(eventText).split('|').map((s: string) => String(s).trim()).join('\n')}</Text>
                         </View>
                       </View>
                     )}
@@ -249,24 +314,24 @@ const LiveTextBroadcast = ({
                               <Text style={styles.pitchCircleText}>{displayCode}</Text>
                             </View>
                             <Text style={styles.pitchText}>
-                              {`${p.pitch_num}구: ${p.pitch}`} <Text style={styles.velocityText}>{p.velocity ? `${p.velocity}km/h` : ''}</Text>
+                              {`${String(p.pitch_num || '')}구: ${String(p.pitch || '')}`} <Text style={styles.velocityText}>{p.velocity ? `${String(p.velocity)}km/h` : ''}</Text>
                             </Text>
                           </>
                         ) : (
                           // 동그라미로 변환되지 않는 결과는 표시하지 않음
                           displayCode !== '?' && p.type ? (
                             <Text style={styles.pitchText}>
-                              {p.type}
+                              {String(p.type || '')}
                             </Text>
                           ) : null
                         )}
                       </View>
-                      {isLast && play.final_result.description && (
+                      {isLast && play.final_result && play.final_result.description && String(play.final_result.description).trim() && (
                         <View style={styles.rightColumn}>
                           <View style={[styles.pitchCircle, {
-                            backgroundColor: mainResultColorMap[play.final_result.code as 'B' | 'H' | 'O' | 'X'],
+                            backgroundColor: mainResultColorMap[String(play.final_result.code || '') as 'B' | 'H' | 'O' | 'X'],
                           }]}> 
-                            <Text style={styles.pitchCircleText}>{play.final_result.code}</Text>
+                            <Text style={styles.pitchCircleText}>{String(play.final_result.code || '')}</Text>
                           </View>
                           {renderResultDescription(play.final_result.description)}
                         </View>
@@ -275,11 +340,14 @@ const LiveTextBroadcast = ({
                   </View>
                 );
               })} 
-              {play.full_result && play.full_result !== '(진행 중)' && (
+              {play.full_result && play.full_result !== '(진행 중)' && String(play.full_result).trim() && (
                 <View style={{ marginTop: 6 }}>
-                  {play.full_result.split('|').map((line: string, idx: number) => {
-                    const i = line.indexOf('(');
-                    const insideParen = line.slice(i).trim();
+                  {String(play.full_result).split('|').map((line: string, idx: number) => {
+                    const trimmedLine = String(line).trim();
+                    if (!trimmedLine) return null;
+                    
+                    const i = trimmedLine.indexOf('(');
+                    const insideParen = trimmedLine.slice(i).trim();
                     const isParenthesis = i !== -1;
 
                     const shouldNotBreak = isParenthesis && (insideParen.startsWith('(으') || insideParen.startsWith('(로'));
@@ -287,7 +355,7 @@ const LiveTextBroadcast = ({
                     if (isParenthesis && !shouldNotBreak) {
                       return (
                         <Text key={idx} style={styles.fullResultText}>
-                          {line.slice(0, i).trim()}
+                          {trimmedLine.slice(0, i).trim()}
                           {'\n'}
                           <Text style={styles.resultTextSmall}>{insideParen}</Text>
                         </Text>
@@ -296,10 +364,27 @@ const LiveTextBroadcast = ({
 
                     return (
                       <Text key={idx} style={styles.fullResultText}>
-                        {line.trim()}
+                        {trimmedLine}
                       </Text>
                     );
                   })}
+                </View>
+              )}
+              
+              {/* 각 타석의 승리 확률 표시 */}
+              {play.pli_data && !play.pli_data.error && play.pli_data.pli && currentPli !== null && (
+                <View style={styles.pliContainer}>
+                  <Text style={styles.pliText}>
+                    {String(teamNameMap[isTop ? String(awayTeam) : String(homeTeam)] || (isTop ? String(awayTeam) : String(homeTeam)))} 승리 확률 {String(currentPli)}%
+                    {pliChange !== null && pliChange !== 0 && (
+                      <Text style={[
+                        styles.pliChangeText,
+                        { color: pliChange > 0 ? '#e74c3c' : '#3498db' }
+                      ]}>
+                        {' '}({pliChange > 0 ? '+' : ''}{String(pliChange)}%)
+                      </Text>
+                    )}
+                  </Text>
                 </View>
               )}
             </View>
@@ -307,6 +392,7 @@ const LiveTextBroadcast = ({
         </View>
       );
     });
+  };
 
   // 무거운 JSX 생성 메모이즈
   const topPlaysView = useMemo(() => renderPlay(topData, true), [topData, awayTeam, homeTeam]);
@@ -345,6 +431,7 @@ const LiveTextBroadcast = ({
           )}
         </View>
       )}
+
 
       <View style={styles.inningTabs}>
         {allInnings.map((inning) => (
@@ -432,5 +519,33 @@ const styles = StyleSheet.create({
   },
   cheerSongToggleTextActive: {
     color: '#ffffff',
+  },
+  winProbabilityContainer: {
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginVertical: 10,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#408A21',
+  },
+  winProbabilityText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    textAlign: 'center',
+  },
+  pliContainer: {
+    marginTop: 8,
+  },
+  pliText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#000',
+    textAlign: 'left',
+  },
+  pliChangeText: {
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });

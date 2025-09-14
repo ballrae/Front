@@ -134,9 +134,6 @@ const PitcherDetailScreen = () => {
         id={pitcher.id}
         name={pitcher.name}
         team={teamNameMap[pitcher.team] ?? pitcher.team}
-        birth={pitcher.birth}
-        pitch={pitcher.pitch}
-        bat={pitcher.bat}
         position="투수"
         image={teamSymbols[pitcher.team.toLowerCase()]}
       />

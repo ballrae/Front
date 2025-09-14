@@ -141,9 +141,6 @@ useEffect(() => {
         id={batter.id}
         name={batter.name}
         team={teamNameMap[batter.team] ?? batter.team}
-        birth={batter.birth}
-        pitch={batter.pitch}
-        bat={batter.bat}
         position={batter.position}
         image={batter.image}
       />
