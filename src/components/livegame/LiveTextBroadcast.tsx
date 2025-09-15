@@ -13,7 +13,6 @@ import teamSymbolMap from '../../constants/teamSymbols';
 import teamNameMap from '../../constants/teamNames';
 import axiosInstance from '../../utils/axiosInstance';
 import mainResultColorMap, { mainresultCodeMap } from '../../constants/mainresultCodeMap';
-import { processRealtimeData } from '../../utils/gameStateManager';
 
 type LiveTextBroadcastProps = {
   gameId: string;
@@ -59,7 +58,11 @@ const LiveTextBroadcast = ({
   const dataSignatureRef = useRef<string>('');
 
   const maxInning = Math.max(maxInningFromAPI, maxInningProp || 9);
-  const allInnings = Array.from({ length: maxInning }, (_, i) => i + 1);
+  
+  // 이닝 배열 메모이제이션으로 성능 최적화
+  const allInnings = useMemo(() => {
+    return Array.from({ length: maxInning }, (_, i) => i + 1);
+  }, [maxInning]);
 
 
   useEffect(() => {
@@ -69,11 +72,10 @@ const LiveTextBroadcast = ({
       setError(null);
       if (showLoading) setLoading(true);
       
-      // 로컬 캐시에서 데이터 확인
-      if (cachedData[selectedInning]) {
+      // 로컬 캐시에서 데이터 확인 (폴링 시에만, 초기 로딩은 별도 useEffect에서 처리)
+      if (!showLoading && cachedData[selectedInning]) {
         setTopData(cachedData[selectedInning].top);
         setBotData(cachedData[selectedInning].bot);
-        setLoading(false);
         return;
       }
       
@@ -148,53 +150,6 @@ const LiveTextBroadcast = ({
           setTopData(mappedTopData);
           setBotData(mappedBotData);
           
-          // 멘트 생성 로직 추가 (경기 종료 시에는 비활성화)
-          if (onCommentGenerated && isRealtime && !isGameDone) {
-            try {
-              // 현재 진행 중인 타석 찾기
-              const currentAtbat = [...topAtBats, ...botAtBats].find(
-                (ab: any) => ab.full_result === '(진행 중)'
-              );
-              
-              if (currentAtbat) {
-                // 현재 공격팀 결정
-                const isTopHalf = topAtBats.some((ab: any) => ab.full_result === '(진행 중)');
-                const attackingTeamName = isTopHalf ? teamNameMap[awayTeam] : teamNameMap[homeTeam];
-                const isHomeTeam = !isTopHalf;
-                
-                // API 데이터를 멘트 생성에 맞는 형태로 변환
-                const apiDataForComment = {
-                  inning: `${selectedInning}회${isTopHalf ? '초' : '말'}`,
-                  half: isTopHalf ? 'top' : 'bot',
-                  score: `${raw.data?.top?.score || 0}:${raw.data?.bot?.score || 0}`,
-                  current_atbat: {
-                    actual_batter: currentAtbat.actual_batter,
-                    pitcher: currentAtbat.pitcher,
-                    main_result: currentAtbat.main_result || '',
-                    on_base: currentAtbat.on_base || { base1: '0', base2: '0', base3: '0' },
-                    outs: currentAtbat.outs || '0사',
-                    strikeout_count: currentAtbat.strikeout_count || '0'
-                  },
-                  game_info: {
-                    inning: selectedInning,
-                    half: isTopHalf ? 'top' : 'bot',
-                    score: `${raw.data?.top?.score || 0}:${raw.data?.bot?.score || 0}`,
-                    outs: currentAtbat.outs || '0'
-                  }
-                };
-                
-                // 멘트 생성
-                const generatedComment = processRealtimeData(apiDataForComment, attackingTeamName, isHomeTeam);
-                
-                if (generatedComment) {
-                  console.log('🔍 LiveTextBroadcast에서 생성된 멘트:', generatedComment);
-                  onCommentGenerated(generatedComment);
-                }
-              }
-            } catch (error) {
-              console.error('멘트 생성 중 오류:', error);
-            }
-          }
           
           // 데이터가 변경되었을 때만 콘솔에 로그 (디버깅용)
          
@@ -211,9 +166,54 @@ const LiveTextBroadcast = ({
             setBatterId(Number(recentAtBat.actual_batter));
           }
         }
-      } catch (e) {
-
-        setError('데이터 요청 중 오류 발생');
+      } catch (e: any) {
+        console.error('🚨 LiveTextBroadcast API Error:', e);
+        
+        if (e.response) {
+          console.error('🚨 API Error Details:');
+          console.error('  Status:', e.response.status);
+          console.error('  URL:', e.config?.url);
+          console.error('  GameId:', gameId);
+          console.error('  SelectedInning:', selectedInning);
+          console.error('  Response:', e.response.data);
+          
+          if (e.response.status === 404) {
+            // 404일 때 사용 가능한 이닝을 찾아서 자동 이동
+            console.log('🔍 Trying to find available inning...');
+            let foundValidInning = false;
+            
+            // 1회부터 현재 선택된 이닝까지 순차적으로 확인해서 가장 높은 유효한 이닝 찾기
+            let highestValidInning = 0;
+            for (let inning = 1; inning <= 9; inning++) {
+              try {
+                const testRes = await axiosInstance.get(`/api/games/${gameId}/relay/${inning}/`);
+                if (testRes.data && testRes.data.data) {
+                  highestValidInning = inning;
+                  console.log(`🔍 Found valid inning: ${inning}`);
+                }
+              } catch (testError) {
+                break; // 더 이상 유효한 이닝이 없음
+              }
+            }
+            
+            if (highestValidInning > 0 && highestValidInning !== selectedInning) {
+              console.log(`🔍 Moving to highest valid inning: ${highestValidInning}`);
+              setSelectedInning(highestValidInning);
+              foundValidInning = true;
+              return; // 유효한 이닝을 찾았으므로 다시 호출됨
+            }
+            
+            if (!foundValidInning) {
+              setError(`${selectedInning}회 데이터가 아직 없습니다`);
+            }
+          } else {
+            setError(`데이터 요청 중 오류 발생 (${e.response.status})`);
+          }
+        } else {
+          console.error('🚨 Network Error:', e.message);
+          setError('네트워크 오류 발생');
+        }
+        
         setTopData([]);
         setBotData([]);
       } finally {
@@ -242,13 +242,18 @@ const LiveTextBroadcast = ({
     };
   }, [gameId, selectedInning, isGameDone]);
 
-  // 선택된 이닝이 변경될 때 캐시된 데이터를 사용
+  // 선택된 이닝이 변경될 때 캐시된 데이터를 즉시 사용
   useEffect(() => {
     if (cachedData[selectedInning]) {
       setTopData(cachedData[selectedInning].top);
       setBotData(cachedData[selectedInning].bot);
+      setLoading(false); // 캐시에서 데이터를 가져올 때는 로딩 상태 해제
+    } else {
+      // 캐시에 없으면 빈 상태로 초기화하고 API 호출 대기
+      setTopData([]);
+      setBotData([]);
     }
-  }, [selectedInning, cachedData]);
+  }, [selectedInning]);
 
   // 캐시 크기 제한 (메모리 누수 방지)
   useEffect(() => {
@@ -308,7 +313,8 @@ const LiveTextBroadcast = ({
     // 현재 이닝의 모든 타석에서 PLI가 있는 타석들의 인덱스를 찾기
     const pliIndices: number[] = [];
     plays.forEach((play, i) => {
-      if (play.pli_data && !play.pli_data.error && play.pli_data.pli) {
+      if (play.pli_data && !play.pli_data.error && play.pli_data.pli && 
+          play.pli_data.pli !== 'unavailable' && typeof play.pli_data.pli === 'number') {
         pliIndices.push(i);
       }
     });
@@ -322,8 +328,9 @@ const LiveTextBroadcast = ({
       let currentPli = null;
       let pliChange = null;
       
-      if (play.pli_data && !play.pli_data.error && play.pli_data.pli) {
-        currentPli = Math.round(play.pli_data.pli * 100);
+      if (play.pli_data && !play.pli_data.error && play.pli_data.pli && 
+          play.pli_data.pli !== 'unavailable' && typeof play.pli_data.pli === 'number') {
+        currentPli = Math.round(play.pli_data.pli * 100 * 10) / 10; // 소수점 첫째 자리까지
         
         // 현재 타석이 PLI가 있는 타석 중 몇 번째인지 찾기
         const currentPliIndex = pliIndices.indexOf(i);
@@ -332,10 +339,12 @@ const LiveTextBroadcast = ({
         if (currentPliIndex > 0) {
           const previousPliIndex = pliIndices[currentPliIndex - 1];
           const previousPlay = plays[previousPliIndex];
-          if (previousPlay && previousPlay.pli_data && !previousPlay.pli_data.error && previousPlay.pli_data.pli) {
-            const previousPli = Math.round(previousPlay.pli_data.pli * 100);
+          if (previousPlay && previousPlay.pli_data && !previousPlay.pli_data.error && 
+              previousPlay.pli_data.pli && previousPlay.pli_data.pli !== 'unavailable' && 
+              typeof previousPlay.pli_data.pli === 'number') {
+            const previousPli = Math.round(previousPlay.pli_data.pli * 100 * 10) / 10;
             if (previousPli !== currentPli) {
-              pliChange = currentPli - previousPli;
+              pliChange = Math.round((currentPli - previousPli) * 10) / 10; // 소수점 첫째 자리까지
             }
           }
         }
@@ -453,7 +462,9 @@ const LiveTextBroadcast = ({
               )}
               
               {/* 각 타석의 승리 확률 표시 */}
-              {play.pli_data && !play.pli_data.error && play.pli_data.pli && (isGameDone || currentPli !== null) && (
+              {play.pli_data && !play.pli_data.error && play.pli_data.pli && 
+               play.pli_data.pli !== 'unavailable' && typeof play.pli_data.pli === 'number' && 
+               (isGameDone || currentPli !== null) && (
                 <View style={styles.pliContainer}>
                   <Text style={styles.pliText}>
                     {String(teamNameMap[isTop ? String(awayTeam) : String(homeTeam)] || (isTop ? String(awayTeam) : String(homeTeam)))} 승리 확률 {String(currentPli)}%
@@ -515,25 +526,31 @@ const LiveTextBroadcast = ({
 
 
       <View style={styles.inningTabs}>
-        {allInnings.map((inning) => (
-          <TouchableOpacity
-            key={inning}
-            onPress={() => {
-              if (status !== 'scheduled') setSelectedInning(inning);
-            }}
-            disabled={status === 'scheduled'}
-          >
-            <Text
-              style={[
-                styles.inningTabText,
-                selectedInning === inning && styles.selectedInning,
-                status === 'scheduled' && { color: '#aaa' },
-              ]}
+        {allInnings.map((inning) => {
+          const isSelected = selectedInning === inning;
+          const isDisabled = status === 'scheduled';
+          
+          return (
+            <TouchableOpacity
+              key={inning}
+              onPress={() => {
+                if (!isDisabled) setSelectedInning(inning);
+              }}
+              disabled={isDisabled}
+              style={{ opacity: isDisabled ? 0.5 : 1 }}
             >
-              {inning}회
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[
+                  styles.inningTabText,
+                  isSelected && styles.selectedInning,
+                  isDisabled && { color: '#aaa' },
+                ]}
+              >
+                {inning}회
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <View style={styles.halfLabel}><Text style={styles.halfLabelText}>{selectedInning}회 초</Text></View>

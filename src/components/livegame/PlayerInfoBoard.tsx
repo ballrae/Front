@@ -153,7 +153,7 @@ const PlayerInfoBoard = ({
       fetchData();
       // 경기 종료된 경우 폴링 비활성화
       if (!isGameDone) {
-        intervalId = setInterval(fetchData, 20000);
+        intervalId = setInterval(fetchData, 10000);
       }
     };
 

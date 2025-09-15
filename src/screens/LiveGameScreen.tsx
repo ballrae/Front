@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
 
@@ -22,6 +22,7 @@ import homerunEffect from '../assets/effect/homerun_effect.json';
 import winEffect from '../assets/effect/win_effect.json';
 import { playCheerSong, stopCheerSong } from '../utils/playCheerSong';
 import { startGameLiveActivity, updateGameLiveActivity, endLiveActivity } from '../bridge/SharedData';
+import backgroundLiveActivityService from '../services/BackgroundLiveActivityService';
 
 type EffectType = 'HIT' | 'HR_OR_SCORE' | 'WIN';
 
@@ -96,6 +97,18 @@ const LiveGameScreen = React.memo(() => {
     const gameMessage = `⚾ ${awayTeamName} vs ${homeTeamName}\n📊 ${awayScore} : ${homeScore}`;
     const halfText = currentHalf === 'top' ? '초' : '말';
     
+    // 초/말에 따라 투수/타자 위치 결정
+    let homePlayer, awayPlayer;
+    if (currentHalf === 'top') {
+      // 초 이닝: 원정팀이 공격
+      homePlayer = pitcherName || "투수";  // 홈팀 투수
+      awayPlayer = batterName || "타자";   // 원정팀 타자
+    } else {
+      // 말 이닝: 홈팀이 공격
+      homePlayer = batterName || "타자";   // 홈팀 타자
+      awayPlayer = pitcherName || "투수";  // 원정팀 투수
+    }
+    
     startGameLiveActivity({
       gameId: gameId,
       homeTeamName: homeTeam,
@@ -104,11 +117,15 @@ const LiveGameScreen = React.memo(() => {
       awayScore: awayScore,
       inning: selectedInning.toString(),
       half: halfText,
-      homePlayer: pitcherName || "투수",
-      awayPlayer: batterName || "타자",
+      homePlayer,
+      awayPlayer,
       gameMessage: gameMessage,
       isLive: status !== 'DONE'
     });
+    
+    // 백그라운드 서비스 시작
+    backgroundLiveActivityService.setGameId(gameId);
+    backgroundLiveActivityService.startBackgroundPolling(gameId);
     
     setIsLiveActivityActive(true);
     console.log('🔍 라이브 액티비티 시작:', gameId);
@@ -123,13 +140,13 @@ const LiveGameScreen = React.memo(() => {
     }
   }, [cheerSongEnabled]);
 
-  // 화면을 벗어날 때 응원가 정리 (라이브 액티비티는 유지)
+  // 화면을 벗어날 때 응원가 정리 (라이브 액티비티는 유지하되 백그라운드 서비스 시작)
   useEffect(() => {
     return () => {
       // 컴포넌트가 언마운트될 때 응원가만 정리
       stopCheerSong();
-      // 라이브 액티비티는 마이팀 경기이므로 유지
-      console.log('🔍 화면 이탈 - 라이브 액티비티 유지');
+      // 라이브 액티비티는 마이팀 경기이므로 유지하되 백그라운드 폴링은 AppState에 따라 자동 관리됨
+      console.log('🔍 화면 이탈 - 라이브 액티비티 유지, 백그라운드 서비스는 AppState에 따라 관리');
     };
   }, []);
 
@@ -139,6 +156,7 @@ const LiveGameScreen = React.memo(() => {
       playCheerSongForPlayer(actualBatterId);
     }
   }, [actualBatterId, cheerSongEnabled]);
+
 
   // 화면 진입 시 라이브 액티비티 시작 (마이팀 경기만)
   useEffect(() => {
@@ -154,24 +172,41 @@ const LiveGameScreen = React.memo(() => {
   // 경기 종료 시 라이브 액티비티 자동 종료 (마이팀 경기만)
   useEffect(() => {
     const isMyTeamsGame = myTeamId === homeTeam || myTeamId === awayTeam;
-    if (status === 'DONE' && isLiveActivityActive && isMyTeamsGame) {
+    const isGameFinished = status === 'DONE' || status === 'FINISHED' || status === 'END' || status === 'CANCELLED';
+    
+    if (isGameFinished && isLiveActivityActive && isMyTeamsGame) {
+      console.log('🔍 경기 종료로 인한 라이브 액티비티 종료. Status:', status);
       endLiveActivity();
+      backgroundLiveActivityService.stopBackgroundPolling();
       setIsLiveActivityActive(false);
-      console.log('🔍 경기 종료로 인한 라이브 액티비티 종료');
     }
   }, [status, isLiveActivityActive, myTeamId, homeTeam, awayTeam]);
 
   // 라이브 액티비티 업데이트를 위한 메모이제이션된 데이터
-  const liveActivityData = useMemo(() => ({
-    homeScore,
-    awayScore,
-    selectedInning,
-    currentHalf,
-    homePlayer: pitcherName || "투수",  // 홈팀 투수
-    awayPlayer: batterName || "타자",  // 원정팀 타자
-    gameMessage: `⚾ ${awayTeamName} vs ${homeTeamName}\n📊 ${awayScore} : ${homeScore}`,
-    isLive: status !== 'DONE'
-  }), [homeScore, awayScore, selectedInning, currentHalf, pitcherName, batterName, awayTeamName, homeTeamName, status]);
+  const liveActivityData = useMemo(() => {
+    // 초/말에 따라 투수/타자 위치 결정
+    let homePlayer, awayPlayer;
+    if (currentHalf === 'top') {
+      // 초 이닝: 원정팀이 공격
+      homePlayer = pitcherName || "투수";  // 홈팀 투수
+      awayPlayer = batterName || "타자";   // 원정팀 타자
+    } else {
+      // 말 이닝: 홈팀이 공격
+      homePlayer = batterName || "타자";   // 홈팀 타자
+      awayPlayer = pitcherName || "투수";  // 원정팀 투수
+    }
+    
+    return {
+      homeScore,
+      awayScore,
+      selectedInning,
+      currentHalf,
+      homePlayer,
+      awayPlayer,
+      gameMessage: `⚾ ${awayTeamName} vs ${homeTeamName}\n📊 ${awayScore} : ${homeScore}`,
+      isLive: status !== 'DONE'
+    };
+  }, [homeScore, awayScore, selectedInning, currentHalf, pitcherName, batterName, awayTeamName, homeTeamName, status]);
 
   // 실시간 데이터 변경 시 라이브 액티비티 업데이트 (디바운싱 적용, 마이팀 경기만)
   useEffect(() => {
@@ -187,8 +222,8 @@ const LiveGameScreen = React.memo(() => {
         awayScore: liveActivityData.awayScore,
         inning: liveActivityData.selectedInning.toString(),
         half: halfText,
-        homePlayer: liveActivityData.homePlayer,  // 홈팀 투수
-        awayPlayer: liveActivityData.awayPlayer,  // 원정팀 타자
+        homePlayer: liveActivityData.homePlayer,  // 초/말에 따라 투수 또는 타자
+        awayPlayer: liveActivityData.awayPlayer,  // 초/말에 따라 타자 또는 투수
         gameMessage: liveActivityData.gameMessage,
         isLive: liveActivityData.isLive
       });
@@ -303,9 +338,11 @@ const LiveGameScreen = React.memo(() => {
               setBatterPcode(actual_batter.pcode);
               setPitcherName(pitcher.player_name);
               setBatterName(actual_batter.player_name);
-              // 실제 타자 ID 설정
-              if (actual_batter.id) {
-                setActualBatterId(String(actual_batter.id));
+              // 실제 타자 ID 설정 (id가 없으면 pcode 사용)
+              const batterId = actual_batter.id || actual_batter.pcode;
+              if (batterId) {
+                setActualBatterId(String(batterId));
+                console.log('🎵 타자 ID 업데이트:', batterId, actual_batter.player_name);
               }
             }
 
@@ -394,9 +431,11 @@ const LiveGameScreen = React.memo(() => {
                 setBatterPcode(actual_batter.pcode);
                 setPitcherName(pitcher.player_name);
                 setBatterName(actual_batter.player_name);
-                // 실제 타자 ID 설정
-                if (actual_batter.id) {
-                  setActualBatterId(String(actual_batter.id));
+                // 실제 타자 ID 설정 (id가 없으면 pcode 사용)
+                const batterId = actual_batter.id || actual_batter.pcode;
+                if (batterId) {
+                  setActualBatterId(String(batterId));
+                  console.log('🎵 타자 ID 업데이트:', batterId, actual_batter.player_name);
                 }
               }
 
@@ -497,6 +536,14 @@ const LiveGameScreen = React.memo(() => {
     fetchCurrentInning();
   }, [fetchCurrentInning]);
 
+  // 화면 포커스 시 데이터 새로고침 (뒤로가기 후 재진입 시 렌더링 문제 해결)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔍 LiveGameScreen 포커스 - 데이터 새로고침');
+      fetchCurrentInning();
+    }, [fetchCurrentInning])
+  );
+
   // 경기 종료 시 1회를 기본값으로 설정 (빠른 로딩을 위해)
   useEffect(() => {
     if (status === 'DONE') {
@@ -504,31 +551,32 @@ const LiveGameScreen = React.memo(() => {
     }
   }, [status]);
 
-  // 경기 종료 상태에서 내 팀이 승리하면 진입 시 WIN 이팩트 1회 재생
-  useEffect(() => {
-    if (status !== 'DONE' || !myTeamId) return;
-    // 내가 선택한 팀이 이 경기의 홈/원정에 포함되지 않으면 트리거하지 않음
-    const isMyTeamsGame = myTeamId === homeTeam || myTeamId === awayTeam;
-    if (!isMyTeamsGame) return;
+  // 화면 진입 시 WIN 이펙트만 다시 재생되도록
+  useFocusEffect(
+    useCallback(() => {
+      // 경기가 종료되고 내 팀이 승리한 경우에만 WIN 이펙트 재생
+      if (status === 'DONE' && myTeamId) {
+        const isMyTeamsGame = myTeamId === homeTeam || myTeamId === awayTeam;
+        if (isMyTeamsGame) {
+          const myScore = myTeamId === homeTeam ? homeScore : awayScore;
+          const oppScore = myTeamId === homeTeam ? awayScore : homeScore;
+          
+          if (typeof myScore === 'number' && typeof oppScore === 'number' && myScore > oppScore) {
+            console.log('🏆 Screen focused, triggering WIN effect for victory');
+            setEffectType('WIN');
+            setLastEffectId(`focus_${gameId}_${myTeamId}_win`);
+          }
+        }
+      }
+    }, [status, myTeamId, homeTeam, awayTeam, homeScore, awayScore, gameId])
+  );
 
-    // 이미 WIN 효과가 트리거되었으면 다시 트리거하지 않음
-    if (winEffectTriggeredRef.current) return;
-
-    const myScore = myTeamId === homeTeam ? homeScore : awayScore;
-    const oppScore = myTeamId === homeTeam ? awayScore : homeScore;
-    const winKey = `done_${gameId}_${myTeamId}_win`;
-    if (typeof myScore === 'number' && typeof oppScore === 'number' && myScore > oppScore && lastEffectId !== winKey) {
-      setEffectType('WIN');
-      setLastEffectId(winKey);
-      winEffectTriggeredRef.current = true; // WIN 효과 트리거 완료 표시
-    }
-  }, [status, myTeamId, homeTeam, awayTeam, homeScore, awayScore, gameId, lastEffectId]);
 
   useEffect(() => {
     if (status === 'DONE') return;
     const intervalId = setInterval(() => {
       fetchCurrentInning();
-    }, 15000); // 10초 -> 15초로 증가
+    }, 10000); // 10초로 통일
     return () => clearInterval(intervalId);
   }, [status, fetchCurrentInning]);
 
@@ -537,7 +585,7 @@ const LiveGameScreen = React.memo(() => {
   useEffect(() => {
     if (status === 'DONE') return;
     const now = Date.now();
-    if (now - lastPitchFetchRef.current < 2000) return; // 800ms -> 2초로 증가
+    if (now - lastPitchFetchRef.current < 1000) return; // 1초 디바운싱
     lastPitchFetchRef.current = now;
     fetchCurrentInning();
   }, [pitchCount, status, fetchCurrentInning]);

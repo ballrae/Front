@@ -237,16 +237,7 @@ const HomeScreen = () => {
         </View>
       </Modal>
 
-      {loading ? (
-        <View style={styles.emptyContainer}>
-          <Image
-            source={require('../assets/app_logos/ballrae_title_logo.png')}
-            style={styles.emptyLogo}
-            resizeMode="contain"
-          />
-          <Text style={styles.emptyText}>경기 정보를 불러오는 중...</Text>
-        </View>
-      ) : hasError ? (
+      {hasError ? (
         <TouchableOpacity 
           style={styles.emptyContainer}
           onPress={fetchGames}
