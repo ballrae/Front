@@ -6,22 +6,6 @@ import ActivityKit
 class SharedDataBridge: NSObject {
   private let suiteName = "group.com.jihee.ballrae"
   
-  // 팀 이름을 팀 코드로 변환하는 함수
-  private func getTeamCode(from teamName: String) -> String {
-    switch teamName {
-    case "한화": return "HH"
-    case "롯데": return "LT"
-    case "KIA": return "KA"
-    case "KT": return "KT"
-    case "LG": return "LG"
-    case "NC": return "NC"
-    case "SSG": return "SL"
-    case "삼성": return "SS"
-    case "두산": return "DS"
-    case "키움": return "HE"
-    default: return teamName.uppercased()
-    }
-  }
 
   @objc
   func saveMessage(_ message: String) {
@@ -33,58 +17,83 @@ class SharedDataBridge: NSObject {
   }
   
   @objc
-  func startLiveActivity(_ message: String) {
-    let attributes = BallraeAttributes(
-      gameId: "TEST_MESSAGE",
-      homeTeamName: "롯데",
-      awayTeamName: "한화"
-    )
-    let content = BallraeAttributes.ContentState(
-      homeTeam: "LT",
-      awayTeam: "HH",
-      homeScore: 7,
-      awayScore: 5,
-      inning: "7",
-      half: "초",
-      homePlayer: "최민석",
-      awayPlayer: "임정호",
-      gameMessage: "해결사는 역시 박준순!\n답답했던 공격의 물꼬를 트는 결정적인 적시타!",
-      isLive: true
-    )
-
-    do {
-      let activity = try Activity<BallraeAttributes>.request(
-        attributes: attributes,
-        contentState: content
-      )
-      print("✅ Live Activity 등록 성공! ID: \(activity.id)")
-    } catch {
-      print("❌ Live Activity 시작 실패: \(error)")
-    }
+  func hasActiveLiveActivity() -> Bool {
+    return !Activity<BallraeAttributes>.activities.isEmpty
   }
   
   @objc
+  func getActiveGameId() -> String? {
+    return Activity<BallraeAttributes>.activities.first?.attributes.gameId
+  }
+  
+  @objc
+  func endAllLiveActivities() {
+    Task {
+      for activity in Activity<BallraeAttributes>.activities {
+        await activity.end(using: activity.contentState)
+      }
+    }
+  }
+  
+  @objc(startGameLiveActivity:homeTeamName:awayTeamName:homeScore:awayScore:inning:half:homePlayer:awayPlayer:gameMessage:isLive:)
   func startGameLiveActivity(
     _ gameId: String,
-    homeTeamName: String,
-    awayTeamName: String,
-    homeScore: NSNumber,
-    awayScore: NSNumber,
-    inning: String,
-    half: String,
-    homePlayer: String,
-    awayPlayer: String,
-    gameMessage: String,
-    isLive: Bool
+    _ homeTeamName: String,
+    _ awayTeamName: String,
+    _ homeScore: NSNumber,
+    _ awayScore: NSNumber,
+    _ inning: String,
+    _ half: String,
+    _ homePlayer: String,
+    _ awayPlayer: String,
+    _ gameMessage: String,
+    _ isLive: Bool
   ) {
+    print("🔍 팀 ID 직접 사용:")
+    print("  홈팀: '\(homeTeamName)'")
+    print("  원정팀: '\(awayTeamName)'")
+    
+    // 기존 라이브 액티비티가 있는지 확인
+    let existingActivities = Activity<BallraeAttributes>.activities
+    if let existingActivity = existingActivities.first {
+      // 같은 게임 ID인 경우 업데이트만 수행
+      if existingActivity.attributes.gameId == gameId {
+        print("🔄 같은 게임 ID 발견, 업데이트만 수행: \(gameId)")
+        Task {
+          let content = BallraeAttributes.ContentState(
+            homeTeam: homeTeamName,
+            awayTeam: awayTeamName,
+            homeScore: homeScore.intValue,
+            awayScore: awayScore.intValue,
+            inning: inning,
+            half: half,
+            homePlayer: homePlayer,
+            awayPlayer: awayPlayer,
+            gameMessage: gameMessage,
+            isLive: isLive
+          )
+          await existingActivity.update(using: content)
+          print("✅ 기존 라이브 액티비티 업데이트 완료")
+        }
+        return
+      } else {
+        // 다른 게임 ID인 경우 기존 액티비티 종료 후 새로 시작
+        print("🔄 다른 게임 ID 발견, 기존 액티비티 종료 후 새로 시작")
+        Task {
+          await existingActivity.end(using: existingActivity.contentState)
+          print("✅ 기존 라이브 액티비티 종료 완료")
+        }
+      }
+    }
+    
     let attributes = BallraeAttributes(
       gameId: gameId,
       homeTeamName: homeTeamName,
       awayTeamName: awayTeamName
     )
     let content = BallraeAttributes.ContentState(
-      homeTeam: getTeamCode(from: homeTeamName),
-      awayTeam: getTeamCode(from: awayTeamName),
+      homeTeam: homeTeamName,
+      awayTeam: awayTeamName,
       homeScore: homeScore.intValue,
       awayScore: awayScore.intValue,
       inning: inning,
@@ -128,22 +137,22 @@ class SharedDataBridge: NSObject {
     }
   }
   
-  @objc
+  @objc(updateGameLiveActivity:awayScore:inning:half:homePlayer:awayPlayer:gameMessage:isLive:)
   func updateGameLiveActivity(
-    homeScore: NSNumber,
-    awayScore: NSNumber,
-    inning: String,
-    half: String,
-    homePlayer: String,
-    awayPlayer: String,
-    gameMessage: String,
-    isLive: Bool
+    _ homeScore: NSNumber,
+    _ awayScore: NSNumber,
+    _ inning: String,
+    _ half: String,
+    _ homePlayer: String,
+    _ awayPlayer: String,
+    _ gameMessage: String,
+    _ isLive: Bool
   ) {
     Task {
       if let activity = Activity<BallraeAttributes>.activities.first {
         let content = BallraeAttributes.ContentState(
-          homeTeam: getTeamCode(from: activity.attributes.homeTeamName),
-          awayTeam: getTeamCode(from: activity.attributes.awayTeamName),
+          homeTeam: activity.attributes.homeTeamName,
+          awayTeam: activity.attributes.awayTeamName,
           homeScore: homeScore.intValue,
           awayScore: awayScore.intValue,
           inning: inning,

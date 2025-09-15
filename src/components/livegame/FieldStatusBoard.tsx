@@ -113,14 +113,29 @@ const FieldStatusBoard: React.FC<Props> = ({ gameId, selectedInning, setSelected
 
       const positions = detectedHalf === 'top' ? data.defense_positions?.home : data.defense_positions?.away;
       setDefensePositions(positions || {});
-    } catch (err) {
-     // console.error('❌ API fetch 실패:', err);
+    } catch (err: any) {
+      console.error('🚨 FieldStatusBoard API Error:', err);
+      
+      if (err.response) {
+        console.error('🚨 API Error Details:');
+        console.error('  Status:', err.response.status);
+        console.error('  URL:', err.config?.url);
+        console.error('  GameId:', gameId);
+        console.error('  SelectedInning:', selectedInning);
+        console.error('  Response:', err.response.data);
+        
+        if (err.response.status === 404) {
+          console.warn(`🔍 ${selectedInning}회 필드 데이터가 아직 없습니다`);
+        }
+      } else {
+        console.error('🚨 Network Error:', err.message);
+      }
     }
   };
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 20000);
+    const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, [gameId, selectedInning]);
 

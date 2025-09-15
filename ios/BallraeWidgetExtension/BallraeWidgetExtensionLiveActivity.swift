@@ -2,7 +2,6 @@ import ActivityKit
 import WidgetKit
 import SwiftUI
 
-
 struct BallraeLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: BallraeAttributes.self) { context in
@@ -32,7 +31,7 @@ struct BallraeLiveActivity: Widget {
                         
                         // 선수명
                         Text(context.state.awayPlayer)
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
                     }
                     
@@ -40,8 +39,7 @@ struct BallraeLiveActivity: Widget {
                     HStack(spacing: 70) {
                         Text("\(context.state.awayScore)")
                             .font(.system(size: 36, weight: .bold))
-                            .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13)) // 408A21
-                        
+                            .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
                         
                         Text("\(context.state.homeScore)")
                             .font(.system(size: 36, weight: .bold))
@@ -77,48 +75,51 @@ struct BallraeLiveActivity: Widget {
                 }
             }
             .frame(maxWidth: .infinity)
-            .background(Color(red: 0.78, green: 0.88, blue: 0.74)) // C7E0BC
+            .background(Color(red: 0.78, green: 0.88, blue: 0.74))
             .cornerRadius(16)
         } dynamicIsland: { context in
-            // 다이나믹 아일랜드 UI (잠금화면과 동일한 구조)
+            // 다이나믹 아일랜드 UI
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    // 원정팀 (왼쪽)
-                    VStack(spacing: 3) {
-                        // 팀 심볼
+                    VStack(spacing: 6) {
                         Image("\(context.state.awayTeam.lowercased())_simbol")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: 24, height: 24)
+                            .frame(width: 36, height: 36)
+                      
                         
-                        // 선수명
                         Text(context.state.awayPlayer)
-                            .font(.system(size: 8, weight: .medium))
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 0.78, green: 0.88, blue: 0.74)) // C7E0BC
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 8)
+                    .padding(.trailing, -8)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    // 홈팀 (오른쪽)
-                    VStack(spacing: 3) {
-                        // 팀 심볼
+                    VStack(spacing: 6) {
                         Image("\(context.state.homeTeam.lowercased())_simbol")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: 24, height: 24)
+                            .frame(width: 36, height: 36)
                         
-                        // 선수명
+                        
                         Text(context.state.homePlayer)
-                            .font(.system(size: 8, weight: .medium))
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 0.78, green: 0.88, blue: 0.74)) // C7E0BC
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 8)
+                    .padding(.leading, -8)
                 }
                 DynamicIslandExpandedRegion(.center) {
-                    VStack(spacing: 4) {
-                        // 이닝 표시 (상단)
+                    VStack(spacing: 8) {
                         Text("\(context.state.inning)회 \(context.state.half)")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.white)
@@ -129,21 +130,19 @@ struct BallraeLiveActivity: Widget {
                                     .fill(Color(red: 0.25, green: 0.54, blue: 0.13))
                             )
                         
-                        // 스코어
                         HStack(spacing: 80) {
                             Text("\(context.state.awayScore)")
-                                .font(.system(size: 24, weight: .bold))
+                                .font(.system(size: 32, weight: .bold))
                                 .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
                             
                             Text("\(context.state.homeScore)")
-                                .font(.system(size: 24, weight: .bold))
+                                .font(.system(size: 32, weight: .bold))
                                 .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
                         }
                         
-                        // 게임 메시지
                         if !context.state.gameMessage.isEmpty {
                             Text(context.state.gameMessage.components(separatedBy: "\n").first ?? "")
-                                .font(.system(size: 10, weight: .medium))
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
                                 .multilineTextAlignment(.center)
                                 .lineLimit(1)
@@ -152,7 +151,8 @@ struct BallraeLiveActivity: Widget {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(Color(red: 0.78, green: 0.88, blue: 0.74)) // C7E0BC
+                    .padding(.leading, -8)
+                    .padding(.trailing, -8)
                 }
             } compactLeading: {
                 HStack(spacing: 2) {
@@ -160,6 +160,7 @@ struct BallraeLiveActivity: Widget {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 18, height: 18)
+                       
                     Text("\(context.state.awayScore)")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
@@ -173,6 +174,7 @@ struct BallraeLiveActivity: Widget {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 18, height: 18)
+                      
                 }
             } minimal: {
                 Text("⚾")
@@ -181,5 +183,3 @@ struct BallraeLiveActivity: Widget {
         }
     }
 }
-
-

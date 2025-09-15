@@ -7,25 +7,11 @@ interface PlayerHeaderProps {
   id: number; 
   name: string;
   team: string;
-  birth: string;
-  pitch: string;
-  bat: string;
   position: string;
   image?: any; // optional
 }
 
-// 생년월일 포맷팅
-const formatBirthDate = (birth?: string) => {
-  if (!birth) return '생년월일 정보 없음';
-  try {
-    const [year, month, day] = birth.split('-');
-    return `${year}년 ${parseInt(month)}월 ${parseInt(day)}일`;
-  } catch (e) {
-    return '날짜 형식 오류';
-  }
-};
-
-const PlayerHeader: React.FC<PlayerHeaderProps> = ({ name, team, birth, pitch, bat, position, image }) => {
+const PlayerHeader: React.FC<PlayerHeaderProps> = ({ name, team, position, image }) => {
   return (
     <View style={styles.container}>
       <Image source={image || require('../../assets/dummy.png')} style={styles.avatar} />
@@ -34,8 +20,6 @@ const PlayerHeader: React.FC<PlayerHeaderProps> = ({ name, team, birth, pitch, b
           <Text style={styles.name}>{name}</Text>
           <Text style={styles.team}>{team}</Text>
         </View>
-        <Text style={styles.detail}>{formatBirthDate(birth)}</Text>
-        <Text style={styles.detail}>{`${pitch}${bat}`}</Text>
         <Text style={styles.detail}>{position}</Text>
       </View>
     </View>
@@ -64,13 +48,12 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   name: {
     fontSize: 20,
     fontWeight: 'bold',
     marginRight: 8,
-    marginBottom:4,
   },
   team: {
     fontSize: 12,

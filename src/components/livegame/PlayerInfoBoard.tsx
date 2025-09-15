@@ -17,6 +17,7 @@ interface Props {
   awayTeam: string;
   currentHalf?: 'top' | 'bot';
   onPitchCountUpdate?: (count: number) => void;
+  isGameDone?: boolean;
 }
 
 const PlayerInfoBoard = ({
@@ -28,6 +29,7 @@ const PlayerInfoBoard = ({
   awayTeam,
   currentHalf = 'top',
   onPitchCountUpdate,
+  isGameDone = false,
 }: Props) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   
@@ -75,9 +77,11 @@ const PlayerInfoBoard = ({
   const fetchData = useCallback(async () => {
     if (!pitcherPcode || !batterPcode) return;
     try {
+      console.log('🔍 API 호출:', `/api/players/realtime/?pitcher=${pitcherPcode}&batter=${batterPcode}`);
       const res = await axiosInstance.get(
         `/api/players/realtime/?pitcher=${pitcherPcode}&batter=${batterPcode}`,
       );
+      console.log('🔍 API 응답 상태:', res.status);
       const data = res.data?.data ?? {};
 
       setPitchData(data?.pitcher?.pitcher ?? []);
@@ -93,6 +97,11 @@ const PlayerInfoBoard = ({
       const batterCareer = data?.batter?.career ?? {};
       const pitcherSeason = data?.pitcher?.season_2025 ?? {};
       const pitcherCareer = data?.pitcher?.career ?? {};
+
+      // 디버깅: API 응답 확인
+      console.log('🔍 API 응답 데이터:', JSON.stringify(data, null, 2));
+      console.log('🔍 타자 시즌 데이터:', batterSeason);
+      console.log('🔍 타자 커리어 데이터:', batterCareer);
 
       const batterSeasonRow = [
         '시즌',
@@ -142,7 +151,10 @@ const PlayerInfoBoard = ({
 
     const start = () => {
       fetchData();
-      intervalId = setInterval(fetchData, 20000);
+      // 경기 종료된 경우 폴링 비활성화
+      if (!isGameDone) {
+        intervalId = setInterval(fetchData, 10000);
+      }
     };
 
     const stop = () => {
@@ -168,7 +180,7 @@ const PlayerInfoBoard = ({
       sub.remove();
       stop();
     };
-  }, [pitcherPcode, batterPcode, fetchData]);
+  }, [pitcherPcode, batterPcode, fetchData, isGameDone]);
 
   const topPitches = pitchData
     .filter((p) => p?.type && typeof p?.rate === 'number')

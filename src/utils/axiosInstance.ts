@@ -3,7 +3,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const axiosInstance = axios.create({
-  baseURL:'http://3.16.129.16:8000', // 실제 API 주소로 변경 필요
+  baseURL:'http://3.15.209.24:8000', // 실제 API 주소로 변경 필요
 });
 
 axiosInstance.interceptors.request.use(
@@ -31,7 +31,7 @@ axiosInstance.interceptors.response.use(
 
       if (refreshToken) {
         try {
-          const res = await axios.post('http://3.16.129.16:8000/api/users/token/refresh/', {
+          const res = await axios.post('http://3.15.209.24:8000/api/users/token/refresh/', {
             refresh: refreshToken,
           });
 

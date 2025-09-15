@@ -1,8 +1,8 @@
 // LiveGameScreen.tsx
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
 
@@ -21,10 +21,12 @@ import hitEffect from '../assets/effect/hit_effect.json';
 import homerunEffect from '../assets/effect/homerun_effect.json';
 import winEffect from '../assets/effect/win_effect.json';
 import { playCheerSong, stopCheerSong } from '../utils/playCheerSong';
+import { startGameLiveActivity, updateGameLiveActivity, endLiveActivity } from '../bridge/SharedData';
+import backgroundLiveActivityService from '../services/BackgroundLiveActivityService';
 
 type EffectType = 'HIT' | 'HR_OR_SCORE' | 'WIN';
 
-const LiveGameScreen = () => {
+const LiveGameScreen = React.memo(() => {
   const route = useRoute<RouteProp<RootStackParamList, 'LiveGameScreen'>>();
   const navigation = useNavigation();
   const { gameId, homeTeamName, awayTeamName, homeTeam, awayTeam, status, homeScore: initialHomeScore, awayScore: initialAwayScore } = route.params as any;
@@ -44,6 +46,7 @@ const LiveGameScreen = () => {
   const [maxInning, setMaxInning] = useState(9);
   const { myTeamId } = useMyTeam();
   const [cheerSongEnabled, setCheerSongEnabled] = useState<boolean>(true);
+  const [isLiveActivityActive, setIsLiveActivityActive] = useState<boolean>(false);
 
   const addEffectToQueue = useCallback((type: EffectType, id: string) => {
     effectQueueRef.current.push({ type, id });
@@ -87,6 +90,48 @@ const LiveGameScreen = () => {
     }
   }, [cheerSongEnabled]);
 
+  // 라이브 액티비티 시작 함수
+  const startLiveActivityForGame = useCallback(() => {
+    if (isLiveActivityActive) return;
+    
+    const gameMessage = `⚾ ${awayTeamName} vs ${homeTeamName}\n📊 ${awayScore} : ${homeScore}`;
+    const halfText = currentHalf === 'top' ? '초' : '말';
+    
+    // 초/말에 따라 투수/타자 위치 결정
+    let homePlayer, awayPlayer;
+    if (currentHalf === 'top') {
+      // 초 이닝: 원정팀이 공격
+      homePlayer = pitcherName || "투수";  // 홈팀 투수
+      awayPlayer = batterName || "타자";   // 원정팀 타자
+    } else {
+      // 말 이닝: 홈팀이 공격
+      homePlayer = batterName || "타자";   // 홈팀 타자
+      awayPlayer = pitcherName || "투수";  // 원정팀 투수
+    }
+    
+    startGameLiveActivity({
+      gameId: gameId,
+      homeTeamName: homeTeam,
+      awayTeamName: awayTeam,
+      homeScore: homeScore,
+      awayScore: awayScore,
+      inning: selectedInning.toString(),
+      half: halfText,
+      homePlayer,
+      awayPlayer,
+      gameMessage: gameMessage,
+      isLive: status !== 'DONE'
+    });
+    
+    // 백그라운드 서비스 시작
+    backgroundLiveActivityService.setGameId(gameId);
+    backgroundLiveActivityService.startBackgroundPolling(gameId);
+    
+    setIsLiveActivityActive(true);
+    console.log('🔍 라이브 액티비티 시작:', gameId);
+  }, [isLiveActivityActive, gameId, homeTeamName, awayTeamName, homeTeam, awayTeam, homeScore, awayScore, selectedInning, currentHalf, pitcherName, batterName, status]);
+
+
   // 응원가 토글 변경 시 현재 재생 중인 소리 정리
   useEffect(() => {
     if (!cheerSongEnabled) {
@@ -95,11 +140,13 @@ const LiveGameScreen = () => {
     }
   }, [cheerSongEnabled]);
 
-  // 화면을 벗어날 때 응원가 정리
+  // 화면을 벗어날 때 응원가 정리 (라이브 액티비티는 유지하되 백그라운드 서비스 시작)
   useEffect(() => {
     return () => {
-      // 컴포넌트가 언마운트될 때 응원가 정리
+      // 컴포넌트가 언마운트될 때 응원가만 정리
       stopCheerSong();
+      // 라이브 액티비티는 마이팀 경기이므로 유지하되 백그라운드 폴링은 AppState에 따라 자동 관리됨
+      console.log('🔍 화면 이탈 - 라이브 액티비티 유지, 백그라운드 서비스는 AppState에 따라 관리');
     };
   }, []);
 
@@ -109,6 +156,83 @@ const LiveGameScreen = () => {
       playCheerSongForPlayer(actualBatterId);
     }
   }, [actualBatterId, cheerSongEnabled]);
+
+
+  // 화면 진입 시 라이브 액티비티 시작 (마이팀 경기만)
+  useEffect(() => {
+    const isMyTeamsGame = myTeamId === homeTeam || myTeamId === awayTeam;
+    if (status !== 'DONE' && !isLiveActivityActive && isMyTeamsGame) {
+      startLiveActivityForGame();
+    } else if (!isMyTeamsGame) {
+      // 다른 팀 경기를 볼 때는 라이브 액티비티를 시작하지 않음 (기존 것 유지)
+      console.log('🔍 다른 팀 경기 - 라이브 액티비티 시작하지 않음');
+    }
+  }, [status, isLiveActivityActive, startLiveActivityForGame, myTeamId, homeTeam, awayTeam]);
+
+  // 경기 종료 시 라이브 액티비티 자동 종료 (마이팀 경기만)
+  useEffect(() => {
+    const isMyTeamsGame = myTeamId === homeTeam || myTeamId === awayTeam;
+    const isGameFinished = status === 'DONE' || status === 'FINISHED' || status === 'END' || status === 'CANCELLED';
+    
+    if (isGameFinished && isLiveActivityActive && isMyTeamsGame) {
+      console.log('🔍 경기 종료로 인한 라이브 액티비티 종료. Status:', status);
+      endLiveActivity();
+      backgroundLiveActivityService.stopBackgroundPolling();
+      setIsLiveActivityActive(false);
+    }
+  }, [status, isLiveActivityActive, myTeamId, homeTeam, awayTeam]);
+
+  // 라이브 액티비티 업데이트를 위한 메모이제이션된 데이터
+  const liveActivityData = useMemo(() => {
+    // 초/말에 따라 투수/타자 위치 결정
+    let homePlayer, awayPlayer;
+    if (currentHalf === 'top') {
+      // 초 이닝: 원정팀이 공격
+      homePlayer = pitcherName || "투수";  // 홈팀 투수
+      awayPlayer = batterName || "타자";   // 원정팀 타자
+    } else {
+      // 말 이닝: 홈팀이 공격
+      homePlayer = batterName || "타자";   // 홈팀 타자
+      awayPlayer = pitcherName || "투수";  // 원정팀 투수
+    }
+    
+    return {
+      homeScore,
+      awayScore,
+      selectedInning,
+      currentHalf,
+      homePlayer,
+      awayPlayer,
+      gameMessage: `⚾ ${awayTeamName} vs ${homeTeamName}\n📊 ${awayScore} : ${homeScore}`,
+      isLive: status !== 'DONE'
+    };
+  }, [homeScore, awayScore, selectedInning, currentHalf, pitcherName, batterName, awayTeamName, homeTeamName, status]);
+
+  // 실시간 데이터 변경 시 라이브 액티비티 업데이트 (디바운싱 적용, 마이팀 경기만)
+  useEffect(() => {
+    const isMyTeamsGame = myTeamId === homeTeam || myTeamId === awayTeam;
+    if (!isLiveActivityActive || status === 'DONE' || !isMyTeamsGame) return;
+    
+    // 디바운싱: 3초 내에 연속 호출 방지
+    const timeoutId = setTimeout(() => {
+      const halfText = liveActivityData.currentHalf === 'top' ? '초' : '말';
+      
+      updateGameLiveActivity({
+        homeScore: liveActivityData.homeScore,
+        awayScore: liveActivityData.awayScore,
+        inning: liveActivityData.selectedInning.toString(),
+        half: halfText,
+        homePlayer: liveActivityData.homePlayer,  // 초/말에 따라 투수 또는 타자
+        awayPlayer: liveActivityData.awayPlayer,  // 초/말에 따라 타자 또는 투수
+        gameMessage: liveActivityData.gameMessage,
+        isLive: liveActivityData.isLive
+      });
+      
+      console.log('🔍 라이브 액티비티 업데이트:', gameId);
+    }, 3000);
+    
+    return () => clearTimeout(timeoutId);
+  }, [liveActivityData, isLiveActivityActive, gameId, status, myTeamId, homeTeam, awayTeam]);
 
   const fetchCurrentInning = useCallback(async () => {
     try {
@@ -214,9 +338,11 @@ const LiveGameScreen = () => {
               setBatterPcode(actual_batter.pcode);
               setPitcherName(pitcher.player_name);
               setBatterName(actual_batter.player_name);
-              // 실제 타자 ID 설정
-              if (actual_batter.id) {
-                setActualBatterId(String(actual_batter.id));
+              // 실제 타자 ID 설정 (id가 없으면 pcode 사용)
+              const batterId = actual_batter.id || actual_batter.pcode;
+              if (batterId) {
+                setActualBatterId(String(batterId));
+                console.log('🎵 타자 ID 업데이트:', batterId, actual_batter.player_name);
               }
             }
 
@@ -264,95 +390,138 @@ const LiveGameScreen = () => {
         // 연장 이닝 확인 실패 시 일반 이닝으로 진행
       }
 
-      // 연장 이닝에 진행 중인 타석이 없으면 일반 이닝 확인
-      for (let inning = 1; inning <= 9; inning++) {
-        const res = await axiosInstance.get(`/api/games/${gameId}/relay/${inning}/`);
-        const data = res.data?.data;
-        const top = data.top?.atbats ?? [];
-        const bot = data.bot?.atbats ?? [];
+      // 연장 이닝에 진행 중인 타석이 없으면 일반 이닝을 최적화된 방식으로 확인
+      // 최신 이닝부터 확인하여 진행 중인 이닝을 빠르게 찾기
+      let foundOngoing = false;
+      
+      // 9회부터 1회까지 역순으로 확인 (최신 이닝 우선)
+      for (let inning = 9; inning >= 1 && !foundOngoing; inning--) {
+        try {
+          const res = await axiosInstance.get(`/api/games/${gameId}/relay/${inning}/`);
+          const data = res.data?.data;
+          
+          if (!data) continue;
+          
+          const top = data.top?.atbats ?? [];
+          const bot = data.bot?.atbats ?? [];
 
-        if ([...top, ...bot].length > 0) {
-          setMaxInning((prev) => Math.max(prev, inning));
-        }
-
-        const isOngoing = [...top, ...bot].some((ab: any) => ab.full_result === '(진행 중)');
-        if (isOngoing && status !== 'DONE') {
-          // 사용자가 수동으로 선택한 이닝이 아니면 진행 중인 이닝으로 설정
-          if (selectedInning === 1) {
-            setSelectedInning(inning);
+          if ([...top, ...bot].length > 0) {
+            setMaxInning((prev) => Math.max(prev, inning));
           }
 
-          const ongoingAtbat = [...top, ...bot].find((ab: any) => ab.full_result === '(진행 중)');
-          if (ongoingAtbat) {
-            const isTop = top.includes(ongoingAtbat);
-            setCurrentHalf(isTop ? 'top' : 'bot');
-
-            const { pitcher, actual_batter, score, main_result, appearance_number } = ongoingAtbat;
-            const atbatId = `${inning}_${isTop ? 'top' : 'bot'}_${appearance_number}`;
-
-            if (pitcher?.pcode && actual_batter?.pcode) {
-              setPitcherPcode(pitcher.pcode);
-              setBatterPcode(actual_batter.pcode);
-              setPitcherName(pitcher.player_name);
-              setBatterName(actual_batter.player_name);
-              // 실제 타자 ID 설정
-              if (actual_batter.id) {
-                setActualBatterId(String(actual_batter.id));
-              }
+          const isOngoing = [...top, ...bot].some((ab: any) => ab.full_result === '(진행 중)');
+          if (isOngoing && status !== 'DONE') {
+            foundOngoing = true;
+            
+            // 사용자가 수동으로 선택한 이닝이 아니면 진행 중인 이닝으로 설정
+            if (selectedInning === 1) {
+              setSelectedInning(inning);
             }
 
-            if (score) {
-              const [away, home] = score.split(':').map(Number);
+            const ongoingAtbat = [...top, ...bot].find((ab: any) => ab.full_result === '(진행 중)');
+            if (ongoingAtbat) {
+              const isTop = top.includes(ongoingAtbat);
+              setCurrentHalf(isTop ? 'top' : 'bot');
 
-              // 득점 효과: 내 팀 점수가 증가하면 트리거 (텍스트에 '득점'이 없어도)
-              const prevHome = prevHomeScoreRef.current;
-              const prevAway = prevAwayScoreRef.current;
-              const scoreKey = `${inning}_${isTop ? 'top' : 'bot'}_${away}_${home}_score`;
-              const myTeamScored =
-                (myTeamId === homeTeam && prevHome !== null && home > prevHome) ||
-                (myTeamId === awayTeam && prevAway !== null && away > prevAway);
-              if (myTeamId && myTeamScored && scoreKey !== lastScoreKey) {
-                setEffectType('HR_OR_SCORE');
-                setLastEffectId(scoreKey);
-                setLastScoreKey(scoreKey);
+              const { pitcher, actual_batter, score, main_result, appearance_number } = ongoingAtbat;
+              const atbatId = `${inning}_${isTop ? 'top' : 'bot'}_${appearance_number}`;
+
+              if (pitcher?.pcode && actual_batter?.pcode) {
+                setPitcherPcode(pitcher.pcode);
+                setBatterPcode(actual_batter.pcode);
+                setPitcherName(pitcher.player_name);
+                setBatterName(actual_batter.player_name);
+                // 실제 타자 ID 설정 (id가 없으면 pcode 사용)
+                const batterId = actual_batter.id || actual_batter.pcode;
+                if (batterId) {
+                  setActualBatterId(String(batterId));
+                  console.log('🎵 타자 ID 업데이트:', batterId, actual_batter.player_name);
+                }
               }
 
-              prevAwayScoreRef.current = away;
-              prevHomeScoreRef.current = home;
-              setAwayScore(away);
-              setHomeScore(home);
-            }
+              if (score) {
+                const [away, home] = score.split(':').map(Number);
 
-            // 현재 우리 팀이 공격 중일 때만 (같은 half에 한해) 직전 확정 타석을 검사
-            const myTeamAtBatNow = (isTop && awayTeam === myTeamId) || (!isTop && homeTeam === myTeamId);
-            if (myTeamAtBatNow) {
-              if (isTop) {
-                const lastCompletedTop = [...top]
-                  .reverse()
-                  .find((ab: any) => ab && ab !== ongoingAtbat && (ab.main_result || (ab.full_result && ab.full_result !== '(진행 중)')));
-                triggerFromCompletedAtbat(lastCompletedTop, true, inning);
-              } else {
-                const lastCompletedBot = [...bot]
-                  .reverse()
-                  .find((ab: any) => ab && ab !== ongoingAtbat && (ab.main_result || (ab.full_result && ab.full_result !== '(진행 중)')));
-                triggerFromCompletedAtbat(lastCompletedBot, false, inning);
+                // 득점 효과: 내 팀 점수가 증가하면 트리거 (텍스트에 '득점'이 없어도)
+                const prevHome = prevHomeScoreRef.current;
+                const prevAway = prevAwayScoreRef.current;
+                const scoreKey = `${inning}_${isTop ? 'top' : 'bot'}_${away}_${home}_score`;
+                const myTeamScored =
+                  (myTeamId === homeTeam && prevHome !== null && home > prevHome) ||
+                  (myTeamId === awayTeam && prevAway !== null && away > prevAway);
+                if (myTeamId && myTeamScored && scoreKey !== lastScoreKey) {
+                  setEffectType('HR_OR_SCORE');
+                  setLastEffectId(scoreKey);
+                  setLastScoreKey(scoreKey);
+                }
+
+                prevAwayScoreRef.current = away;
+                prevHomeScoreRef.current = home;
+                setAwayScore(away);
+                setHomeScore(home);
+              }
+
+              // 현재 우리 팀이 공격 중일 때만 (같은 half에 한해) 직전 확정 타석을 검사
+              const myTeamAtBatNow = (isTop && awayTeam === myTeamId) || (!isTop && homeTeam === myTeamId);
+              if (myTeamAtBatNow) {
+                if (isTop) {
+                  const lastCompletedTop = [...top]
+                    .reverse()
+                    .find((ab: any) => ab && ab !== ongoingAtbat && (ab.main_result || (ab.full_result && ab.full_result !== '(진행 중)')));
+                  triggerFromCompletedAtbat(lastCompletedTop, true, inning);
+                } else {
+                  const lastCompletedBot = [...bot]
+                    .reverse()
+                    .find((ab: any) => ab && ab !== ongoingAtbat && (ab.main_result || (ab.full_result && ab.full_result !== '(진행 중)')));
+                  triggerFromCompletedAtbat(lastCompletedBot, false, inning);
+                }
               }
             }
           }
-          return;
+        } catch (error: any) {
+          // 404 오류는 정상적인 경우이므로 로그 레벨을 낮춤
+          if (error.response?.status === 404) {
+            console.log(`🔍 ${inning}회 데이터 없음 (404)`);
+          } else {
+            console.log(`🔍 ${inning}회 데이터 오류:`, error.message);
+          }
+          continue;
         }
-        // 진행 중 타석이 없으면, 우리 팀이 공격했던 half의 최근 확정 타석만 검사
-        if (myTeamId === awayTeam) {
-          const lastCompletedTop = [...top]
-            .reverse()
-            .find((ab: any) => ab && (ab.main_result || (ab.full_result && ab.full_result !== '(진행 중)')));
-          triggerFromCompletedAtbat(lastCompletedTop, true, inning);
-        }
-        if (myTeamId === homeTeam) {
-          const lastCompletedBot = [...bot]
-            .reverse()
-            .find((ab: any) => ab && (ab.main_result || (ab.full_result && ab.full_result !== '(진행 중)')));
-          triggerFromCompletedAtbat(lastCompletedBot, false, inning);
+      }
+      
+      // 진행 중인 타석이 없으면, 우리 팀이 공격했던 half의 최근 확정 타석만 검사
+      if (!foundOngoing) {
+        for (let inning = 9; inning >= 1; inning--) {
+          try {
+            const res = await axiosInstance.get(`/api/games/${gameId}/relay/${inning}/`);
+            const data = res.data?.data;
+            
+            if (!data) continue;
+            
+            const top = data.top?.atbats ?? [];
+            const bot = data.bot?.atbats ?? [];
+            
+            if (myTeamId === awayTeam) {
+              const lastCompletedTop = [...top]
+                .reverse()
+                .find((ab: any) => ab && (ab.main_result || (ab.full_result && ab.full_result !== '(진행 중)')));
+              triggerFromCompletedAtbat(lastCompletedTop, true, inning);
+            }
+            if (myTeamId === homeTeam) {
+              const lastCompletedBot = [...bot]
+                .reverse()
+                .find((ab: any) => ab && (ab.main_result || (ab.full_result && ab.full_result !== '(진행 중)')));
+              triggerFromCompletedAtbat(lastCompletedBot, false, inning);
+            }
+          } catch (error: any) {
+            // 404 오류는 정상적인 경우이므로 로그 레벨을 낮춤
+            if (error.response?.status === 404) {
+              console.log(`🔍 ${inning}회 데이터 없음 (404)`);
+            } else {
+              console.log(`🔍 ${inning}회 데이터 오류:`, error.message);
+            }
+            continue;
+          }
         }
       }
     } catch (err) {
@@ -361,51 +530,67 @@ const LiveGameScreen = () => {
       // 최초 1회 데이터 로딩이 끝나면 이후부터 효과 활성화
       if (!effectsEnabledRef.current) effectsEnabledRef.current = true;
     }
-  }, [gameId, myTeamId, lastEffectId, homeTeam, awayTeam]);
+  }, [gameId, myTeamId, lastEffectId, homeTeam, awayTeam, status]);
 
   useEffect(() => {
     fetchCurrentInning();
   }, [fetchCurrentInning]);
 
-  // 경기 종료 상태에서 내 팀이 승리하면 진입 시 WIN 이팩트 1회 재생
+  // 화면 포커스 시 데이터 새로고침 (뒤로가기 후 재진입 시 렌더링 문제 해결)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔍 LiveGameScreen 포커스 - 데이터 새로고침');
+      fetchCurrentInning();
+    }, [fetchCurrentInning])
+  );
+
+  // 경기 종료 시 1회를 기본값으로 설정 (빠른 로딩을 위해)
   useEffect(() => {
-    if (status !== 'DONE' || !myTeamId) return;
-    // 내가 선택한 팀이 이 경기의 홈/원정에 포함되지 않으면 트리거하지 않음
-    const isMyTeamsGame = myTeamId === homeTeam || myTeamId === awayTeam;
-    if (!isMyTeamsGame) return;
-
-    // 이미 WIN 효과가 트리거되었으면 다시 트리거하지 않음
-    if (winEffectTriggeredRef.current) return;
-
-    const myScore = myTeamId === homeTeam ? homeScore : awayScore;
-    const oppScore = myTeamId === homeTeam ? awayScore : homeScore;
-    const winKey = `done_${gameId}_${myTeamId}_win`;
-    if (typeof myScore === 'number' && typeof oppScore === 'number' && myScore > oppScore && lastEffectId !== winKey) {
-      setEffectType('WIN');
-      setLastEffectId(winKey);
-      winEffectTriggeredRef.current = true; // WIN 효과 트리거 완료 표시
+    if (status === 'DONE') {
+      setSelectedInning(1);
     }
-  }, [status, myTeamId, homeTeam, awayTeam, homeScore, awayScore, gameId, lastEffectId]);
+  }, [status]);
+
+  // 화면 진입 시 WIN 이펙트만 다시 재생되도록
+  useFocusEffect(
+    useCallback(() => {
+      // 경기가 종료되고 내 팀이 승리한 경우에만 WIN 이펙트 재생
+      if (status === 'DONE' && myTeamId) {
+        const isMyTeamsGame = myTeamId === homeTeam || myTeamId === awayTeam;
+        if (isMyTeamsGame) {
+          const myScore = myTeamId === homeTeam ? homeScore : awayScore;
+          const oppScore = myTeamId === homeTeam ? awayScore : homeScore;
+          
+          if (typeof myScore === 'number' && typeof oppScore === 'number' && myScore > oppScore) {
+            console.log('🏆 Screen focused, triggering WIN effect for victory');
+            setEffectType('WIN');
+            setLastEffectId(`focus_${gameId}_${myTeamId}_win`);
+          }
+        }
+      }
+    }, [status, myTeamId, homeTeam, awayTeam, homeScore, awayScore, gameId])
+  );
+
 
   useEffect(() => {
     if (status === 'DONE') return;
     const intervalId = setInterval(() => {
       fetchCurrentInning();
-    }, 5000);
+    }, 10000); // 10초로 통일
     return () => clearInterval(intervalId);
   }, [status, fetchCurrentInning]);
 
-  // 투구수가 변할 때(=직후 이벤트 발생 가능 타이밍), 즉시 한 번 더 최신화
+  // 투구수가 변할 때만 즉시 업데이트 (성능 최적화)
   const lastPitchFetchRef = useRef<number>(0);
   useEffect(() => {
     if (status === 'DONE') return;
     const now = Date.now();
-    if (now - lastPitchFetchRef.current < 800) return; // 과도한 호출 방지
+    if (now - lastPitchFetchRef.current < 1000) return; // 1초 디바운싱
     lastPitchFetchRef.current = now;
     fetchCurrentInning();
   }, [pitchCount, status, fetchCurrentInning]);
 
-  const renderEffect = () => {
+  const renderEffect = useCallback(() => {
     if (!effectType) return null;
 
     let source;
@@ -471,10 +656,10 @@ const LiveGameScreen = () => {
         />
       </View>
     );
-  };
+  }, [effectType, effectRef, playNextEffect]);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.mainContainer}>
       {renderEffect()}
       <ScrollView style={styles.container}>
         <Header
@@ -484,7 +669,7 @@ const LiveGameScreen = () => {
         />
 
         {status !== 'DONE' && (
-          <View style={{ marginHorizontal: -18 }}>
+          <View style={styles.fieldStatusContainer}>
             <FieldStatusBoard
               gameId={gameId}
               selectedInning={selectedInning}
@@ -499,7 +684,7 @@ const LiveGameScreen = () => {
         <View style={styles.scoreBoxFull}>
           <View style={styles.teamBlockContainer}>
             <Image source={teamLogoMap[awayTeamId]} style={styles.logo} />
-            <View style={[styles.teamBlock, { alignItems: 'flex-start' }]}>
+            <View style={styles.teamBlockLeft}>
               <Text style={styles.teamLabel}>{awayTeamName.split(' ')[0]}</Text>
               <Text style={styles.teamLabel}>{awayTeamName.split(' ')[1]}</Text>
             </View>
@@ -524,7 +709,7 @@ const LiveGameScreen = () => {
           </View>
 
           <View style={styles.teamBlockContainer}>
-            <View style={[styles.teamBlock, { alignItems: 'flex-end' }]}>
+            <View style={styles.teamBlockRight}>
               <Text style={styles.teamLabel}>{homeTeamName.split(' ')[0]}</Text>
               <Text style={styles.teamLabel}>{homeTeamName.split(' ')[1]}</Text>
             </View>
@@ -533,7 +718,7 @@ const LiveGameScreen = () => {
         </View>
 
         {status !== 'DONE' && (
-          <View style={{ marginBottom: 24 }}>
+          <View style={styles.playerInfoContainer}>
             <PlayerInfoBoard
               pitcherPcode={pitcherPcode}
               batterPcode={batterPcode}
@@ -543,11 +728,12 @@ const LiveGameScreen = () => {
               batterName={batterName}
               currentHalf={currentHalf}
               onPitchCountUpdate={setPitchCount}
+              isGameDone={status === 'DONE'}
             />
           </View>
         )}
 
-        <View style={{ marginBottom: 24 }}>
+        <View style={styles.liveTextContainer}>
           <LiveTextBroadcast
             gameId={gameId}
             selectedInning={selectedInning}
@@ -563,11 +749,13 @@ const LiveGameScreen = () => {
       </ScrollView>
     </View>
   );
-};
+});
 
 export default LiveGameScreen;
 
+// 스타일 객체를 컴포넌트 외부로 이동하여 메모이제이션
 const styles = StyleSheet.create({
+  mainContainer: { flex: 1 },
   container: { flex: 1, backgroundColor: '#fff' },
   scoreBoxFull: {
     flexDirection: 'row',
@@ -642,5 +830,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 13,
     textAlign: 'center',
+  },
+  fieldStatusContainer: {
+    marginHorizontal: -18,
+  },
+  teamBlockLeft: {
+    marginHorizontal: 6,
+    alignItems: 'flex-start',
+  },
+  teamBlockRight: {
+    marginHorizontal: 6,
+    alignItems: 'flex-end',
+  },
+  playerInfoContainer: {
+    marginBottom: 24,
+  },
+  liveTextContainer: {
+    marginBottom: 24,
   },
 });

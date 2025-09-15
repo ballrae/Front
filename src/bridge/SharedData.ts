@@ -54,6 +54,32 @@ export function endLiveActivity() {
   }
 }
 
+export function hasActiveLiveActivity(): boolean {
+  if (SharedDataBridge?.hasActiveLiveActivity) {
+    return SharedDataBridge.hasActiveLiveActivity();
+  } else {
+    console.warn("🚨 hasActiveLiveActivity is not defined on SharedDataBridge");
+    return false;
+  }
+}
+
+export function getActiveGameId(): string | null {
+  if (SharedDataBridge?.getActiveGameId) {
+    return SharedDataBridge.getActiveGameId();
+  } else {
+    console.warn("🚨 getActiveGameId is not defined on SharedDataBridge");
+    return null;
+  }
+}
+
+export function endAllLiveActivities() {
+  if (SharedDataBridge?.endAllLiveActivities) {
+    SharedDataBridge.endAllLiveActivities();
+  } else {
+    console.warn("🚨 endAllLiveActivities is not defined on SharedDataBridge");
+  }
+}
+
 export function saveMessageToWidget(message: string) {
   if (Platform.OS === 'android') {
     MessageBridge?.saveMessage(message);
