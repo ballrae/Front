@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,6 +14,10 @@ import teamSymbols from '../constants/teamSymbols';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 
 import axiosInstance from '../utils/axiosInstance';
+
+// API 응답 캐시
+const pitcherCache = new Map<string, { data: Pitcher; timestamp: number }>();
+const PITCHER_CACHE_DURATION = 300000; // 5분 캐시
 
 
 type PitcherRouteProp = RouteProp<RootStackParamList, 'PitcherDetailScreen'>;
@@ -57,49 +61,67 @@ const PitcherDetailScreen = () => {
   const [pitcher, setPitcher] = useState<Pitcher | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // 데이터 매핑 함수를 메모이제이션
+  const mapPitcherData = useCallback((raw: any): Pitcher => {
+    const metrics = raw.metrics ?? {};
+    const raaData = raw.raa_data ?? {};
+
+    return {
+      id: raw.player.id,
+      name: raw.player.player_name,
+      team: raw.player.team_id,
+      birth: '-',
+      pitch: '-',
+      bat: '-',
+
+      G: raw.games ?? 0,
+      W: raw.w ?? 0,
+      L: raw.l ?? 0,
+      SV: raw.sv ?? 0,
+      IP: raw.innings ?? 0,
+      SO: raw.strikeouts ?? 0,
+      ERA: raw.era ?? 0,
+      WHIP: raw.stats?.whip ?? 0,
+      WAR: raw.war ?? 0,
+      AVG: raw.stats?.avg ?? 0,
+
+      W_percentile: metrics.w_percentile ?? 0,
+      L_percentile: metrics.l_percentile ?? 0,
+      SO_percentile: metrics.strikeouts_percentile ?? 0,
+      ERA_percentile: metrics.era_percentile ?? 0,
+      WHIP_percentile: metrics.whip_percentile ?? 0,
+      WAR_percentile: metrics.war_percentile ?? 0,
+      AVG_percentile: metrics.avg_percentile ?? 0,
+
+      K9: raw.stats?.['k/9'] ?? 0,
+      BB9: raw.stats?.['bb/9'] ?? 0,
+      K9_percentile: metrics.k9_percentile ?? 0,
+      BB9_percentile: metrics.bb9_percentile ?? 0,
+      RAA_percentile: raaData.total_raa_percentile ?? 0,
+    };
+  }, []);
+
   useEffect(() => {
+    const cacheKey = `pitcher_${playerId}`;
+    const cached = pitcherCache.get(cacheKey);
+    
+    // 캐시된 데이터가 있고 5분 이내라면 캐시 사용
+    if (cached && Date.now() - cached.timestamp < PITCHER_CACHE_DURATION) {
+      setPitcher(cached.data);
+      setLoading(false);
+      return;
+    }
+
     axiosInstance
-    .get(`/api/players/pitcher/`, {
-      params: { id: playerId }
-    })
+      .get(`/api/players/pitcher/`, {
+        params: { id: playerId }
+      })
       .then(response => {
-        const raw = response.data.data;
-        const metrics = raw.metrics ?? {};
-
-        const mappedPitcher: Pitcher = {
-          id: raw.player.id,
-          name: raw.player.player_name,
-          team: raw.player.team_id,
-          birth: '-',
-          pitch: '-',
-          bat: '-',
-
-          G: raw.games ?? 0,
-          W: raw.w ?? 0,
-          L: raw.l ?? 0,
-          SV: raw.sv ?? 0,
-          IP: raw.innings ?? 0,
-          SO: raw.strikeouts ?? 0,
-          ERA: raw.era ?? 0,
-          WHIP: raw.stats?.whip ?? 0,
-          WAR: raw.war ?? 0,
-          AVG: raw.stats?.avg ?? 0,
-
-          W_percentile: metrics.w_percentile ?? 0,
-          L_percentile: metrics.l_percentile ?? 0,
-          SO_percentile: metrics.strikeouts_percentile ?? 0,
-          ERA_percentile: metrics.era_percentile ?? 0,
-          WHIP_percentile: metrics.whip_percentile ?? 0,
-          WAR_percentile: metrics.war_percentile ?? 0,
-          AVG_percentile: metrics.avg_percentile ?? 0,
-
-          K9: raw.stats?.['k/9'] ?? 0,
-          BB9: raw.stats?.['bb/9'] ?? 0,
-          K9_percentile: metrics.k9_percentile ?? 0,
-          BB9_percentile: metrics.bb9_percentile ?? 0,
-          RAA_percentile: 0, // JSON에 없음
-        };
-
+        const mappedPitcher = mapPitcherData(response.data.data);
+        
+        // 캐시에 저장
+        pitcherCache.set(cacheKey, { data: mappedPitcher, timestamp: Date.now() });
+        
         setPitcher(mappedPitcher);
       })
       .catch(error => {
@@ -108,7 +130,23 @@ const PitcherDetailScreen = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, [playerId]);
+  }, [playerId, mapPitcherData]);
+
+  // 메모이제이션된 핸들러
+  const handleBackPress = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
+  // 메모이제이션된 계산값들
+  const teamName = useMemo(() => 
+    pitcher?.team ? teamNameMap[pitcher.team] ?? pitcher.team : '',
+    [pitcher?.team]
+  );
+
+  const teamImage = useMemo(() => 
+    pitcher?.team ? teamSymbols[pitcher.team.toLowerCase()] : null,
+    [pitcher?.team]
+  );
 
   if (loading) {
     return (
@@ -128,14 +166,14 @@ const PitcherDetailScreen = () => {
 
   return (
     <ScrollView style={styles.container}>
-      <Header showBackButton onBackPress={() => navigation.goBack()} title="" />
+      <Header showBackButton onBackPress={handleBackPress} title="" />
       
       <PlayerHeader
         id={pitcher.id}
         name={pitcher.name}
-        team={teamNameMap[pitcher.team] ?? pitcher.team}
+        team={teamName}
         position="투수"
-        image={teamSymbols[pitcher.team.toLowerCase()]}
+        image={teamImage}
       />
 
       <PitcherBasicStats
@@ -169,7 +207,7 @@ const PitcherDetailScreen = () => {
   );
 };
 
-export default PitcherDetailScreen;
+export default memo(PitcherDetailScreen);
 
 const styles = StyleSheet.create({
   container: {

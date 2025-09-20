@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,6 +14,10 @@ import teamNameMap from '../constants/teamNames';
 import teamSymbolMap from '../constants/teamSymbols';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 import axiosInstance from '../utils/axiosInstance';
+
+// API 응답 캐시
+const batterCache = new Map<string, { data: BatterData; timestamp: number }>();
+const BATTER_CACHE_DURATION = 300000; // 5분 캐시
 
 type BatterRouteProp = RouteProp<RootStackParamList, 'BatterDetailScreen'>;
 
@@ -62,61 +66,90 @@ const BatterDetailScreen = () => {
   const [batter, setBatter] = useState<BatterData | null>(null);
   const [loading, setLoading] = useState(true);
 
-useEffect(() => {
-  axiosInstance
-    .get(`/api/players/batter/`, {
-      params: { id: playerId }
-    })
-    .then((res) => {
-      const raw = res.data.data;
-      const metrics = raw.metrics ?? {};
-      const teamId = raw.player.team_id.toLowerCase();
+  // 데이터 매핑 함수를 메모이제이션
+  const mapBatterData = useCallback((raw: any): BatterData => {
+    const metrics = raw.metrics ?? {};
+    const raaData = raw.raa_data ?? {};
+    const teamId = raw.player.team_id.toLowerCase();
 
-      const mappedBatter: BatterData = {
-        id: raw.player.id,
-        name: raw.player.player_name,
-        team: raw.player.team_id,
-        birth: '-',
-        pitch: '-',
-        bat: '-',
-        position: '타자',
-        image: teamSymbolMap[teamId] ?? null,
-        G: raw.games ?? 0,
-        AVG: raw.stats.avg ?? 0,
-        WAR: raw.war ?? 0,
-        wRC: raw.wrc ?? 0,
-        OBP: raw.stats.obp ?? 0,
-        SLG: raw.stats.slg ?? 0,
-        OPS: raw.stats.ops ?? 0,
-        HR: raw.homeruns ?? 0,
-        WAR_percentile: metrics.war_percentile ?? 0,
-        wRCp_percentile: metrics.wrc_percentile ?? 0,
-        OBP_percentile: metrics.obp_percentile ?? 0,
-        SLG_percentile: metrics.slg_percentile ?? 0,
-        OPS_percentile: metrics.ops_percentile ?? 0,
-        HR_percentile: metrics.homeruns_percentile ?? 0,
-        BABIP: raw.babip ?? 0,
-        IsoP: raw.stats.isop ?? 0,
-        BBK: raw.stats['bb/k'] ?? 0,
-        BABIP_percentile: metrics.babip_percentile ?? 0,
-        IsoP_percentile: metrics.iso_percentile ?? 0,
-        BBK_percentile: metrics.bb_k_percentile ?? 0,
-        attackRAA: 0,
-        defenseRAA: 0,
-        baseRAA: 0,
-        throwRAA: 0,
-        runRAA: 0,
-        overallRAA: 0,
-      };
+    return {
+      id: raw.player.id,
+      name: raw.player.player_name,
+      team: raw.player.team_id,
+      birth: '-',
+      pitch: '-',
+      bat: '-',
+      position: '타자',
+      image: teamSymbolMap[teamId] ?? null,
+      G: raw.games ?? 0,
+      AVG: raw.stats.avg ?? 0,
+      WAR: raw.war ?? 0,
+      wRC: raw.wrc ?? 0,
+      OBP: raw.stats.obp ?? 0,
+      SLG: raw.stats.slg ?? 0,
+      OPS: raw.stats.ops ?? 0,
+      HR: raw.homeruns ?? 0,
+      WAR_percentile: metrics.war_percentile ?? 0,
+      wRCp_percentile: metrics.wrc_percentile ?? 0,
+      OBP_percentile: metrics.obp_percentile ?? 0,
+      SLG_percentile: metrics.slg_percentile ?? 0,
+      OPS_percentile: metrics.ops_percentile ?? 0,
+      HR_percentile: metrics.homeruns_percentile ?? 0,
+      BABIP: raw.babip ?? 0,
+      IsoP: raw.stats.isop ?? 0,
+      BBK: raw.stats['bb/k'] ?? 0,
+      BABIP_percentile: metrics.babip_percentile ?? 0,
+      IsoP_percentile: metrics.iso_percentile ?? 0,
+      BBK_percentile: metrics.bb_k_percentile ?? 0,
+      attackRAA: raaData.offensive_raa ?? 0,
+      defenseRAA: raaData.defensive_raa ?? 0,
+      baseRAA: raaData.baserunning_raa ?? 0,
+      throwRAA: raaData.fielding_raa ?? 0,
+      runRAA: raaData.batting_raa ?? 0,
+      overallRAA: raaData.total_raa ?? 0,
+    };
+  }, []);
 
-      setBatter(mappedBatter);
+  useEffect(() => {
+    const cacheKey = `batter_${playerId}`;
+    const cached = batterCache.get(cacheKey);
+    
+    // 캐시된 데이터가 있고 5분 이내라면 캐시 사용
+    if (cached && Date.now() - cached.timestamp < BATTER_CACHE_DURATION) {
+      setBatter(cached.data);
       setLoading(false);
-    })
-    .catch((err) => {
-      console.error('타자 정보 로딩 실패:', err);
-      setLoading(false);
-    });
-}, [playerId]);
+      return;
+    }
+
+    axiosInstance
+      .get(`/api/players/batter/`, {
+        params: { id: playerId }
+      })
+      .then((res) => {
+        const mappedBatter = mapBatterData(res.data.data);
+        
+        // 캐시에 저장
+        batterCache.set(cacheKey, { data: mappedBatter, timestamp: Date.now() });
+        
+        setBatter(mappedBatter);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('타자 정보 로딩 실패:', err);
+        setLoading(false);
+      });
+  }, [playerId, mapBatterData]);
+
+  // 메모이제이션된 핸들러
+  const handleBackPress = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
+  // 메모이제이션된 계산값들
+  const teamName = useMemo(() => 
+    batter?.team ? teamNameMap[batter.team] ?? batter.team : '',
+    [batter?.team]
+  );
 
   if (loading) {
     return (
@@ -136,11 +169,11 @@ useEffect(() => {
 
   return (
     <ScrollView style={styles.container}>
-      <Header showBackButton onBackPress={() => navigation.goBack()} title="" />
+      <Header showBackButton onBackPress={handleBackPress} title="" />
       <PlayerHeader
         id={batter.id}
         name={batter.name}
-        team={teamNameMap[batter.team] ?? batter.team}
+        team={teamName}
         position={batter.position}
         image={batter.image}
       />
@@ -185,7 +218,7 @@ useEffect(() => {
   );
 };
 
-export default BatterDetailScreen;
+export default memo(BatterDetailScreen);
 
 const styles = StyleSheet.create({
   container: {

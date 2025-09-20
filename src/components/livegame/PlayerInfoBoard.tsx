@@ -1,12 +1,20 @@
 // PlayerInfoBoard.tsx
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, AppState, AppStateStatus, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import teamSymbolMap from '../../constants/teamSymbols';
 import axiosInstance from '../../utils/axiosInstance';
 import { RootStackParamList } from '../../navigation/RootStackParamList';
+
+// API 응답 캐시
+const apiCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 5000; // 5초 캐시
+
+// 선수 ID 캐시
+const playerIdCache = new Map<string, { id: string | null; timestamp: number }>();
+const PLAYER_ID_CACHE_DURATION = 300000; // 5분 캐시
 
 interface Props {
   pitcherPcode: string | null;
@@ -33,14 +41,25 @@ const PlayerInfoBoard = ({
 }: Props) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   
-  // pcode를 id로 변환하는 함수
+  // pcode를 id로 변환하는 함수 (캐싱 적용)
   const getPlayerIdFromPcode = useCallback(async (pcode: string, isPitcher: boolean) => {
+    const cacheKey = `${pcode}_${isPitcher ? 'pitcher' : 'batter'}`;
+    const cached = playerIdCache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < PLAYER_ID_CACHE_DURATION) {
+      return cached.id;
+    }
+
     try {
       const endpoint = isPitcher ? '/api/players/pitcher/' : '/api/players/batter/';
       const res = await axiosInstance.get(endpoint, {
         params: { pcode: pcode }
       });
-      return res.data.data?.player?.id;
+      const playerId = res.data.data?.player?.id;
+      
+      // 캐시에 저장
+      playerIdCache.set(cacheKey, { id: playerId, timestamp: Date.now() });
+      return playerId;
     } catch (error) {
       console.error('선수 ID 조회 실패:', error);
       return null;
@@ -76,6 +95,24 @@ const PlayerInfoBoard = ({
 
   const fetchData = useCallback(async () => {
     if (!pitcherPcode || !batterPcode) return;
+    
+    const cacheKey = `realtime_${pitcherPcode}_${batterPcode}`;
+    const cached = apiCache.get(cacheKey);
+    
+    // 캐시된 데이터가 있고 5초 이내라면 캐시 사용
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      const data = cached.data;
+      setPitchData(data?.pitcher?.pitcher ?? []);
+      setBattedBall(data?.batter?.batter ?? { left: 0, center: 0, right: 0 });
+      const nextPitcherToday = data?.pitcher?.today ?? pitcherToday;
+      setPitcherToday(nextPitcherToday);
+      if (typeof nextPitcherToday?.pitches === 'number' && onPitchCountUpdate) {
+        onPitchCountUpdate(Number(nextPitcherToday.pitches));
+      }
+      setBatterToday(data?.batter?.today ?? batterToday);
+      return;
+    }
+
     try {
       console.log('🔍 API 호출:', `/api/players/realtime/?pitcher=${pitcherPcode}&batter=${batterPcode}`);
       const res = await axiosInstance.get(
@@ -83,6 +120,9 @@ const PlayerInfoBoard = ({
       );
       console.log('🔍 API 응답 상태:', res.status);
       const data = res.data?.data ?? {};
+
+      // 캐시에 저장
+      apiCache.set(cacheKey, { data, timestamp: Date.now() });
 
       setPitchData(data?.pitcher?.pitcher ?? []);
       setBattedBall(data?.batter?.batter ?? { left: 0, center: 0, right: 0 });
@@ -123,16 +163,16 @@ const PlayerInfoBoard = ({
         '시즌',
         String(pitcherSeason.games ?? 0),
         String(pitcherSeason.innings ?? 0),
-        '-',
-        '-',
+        String(pitcherSeason.win ?? 0),
+        String(pitcherSeason.lose ?? 0),
         (pitcherSeason.era ?? 0).toFixed(2),
       ];
       const pitcherCareerRow = [
         '3시즌',
         String(pitcherCareer.games ?? 0),
         String(pitcherCareer.innings ?? 0),
-        '-',
-        '-',
+        String(pitcherCareer.win ?? 0),
+        String(pitcherCareer.lose ?? 0),
         (pitcherCareer.era ?? 0).toFixed(2),
       ];
 
@@ -141,7 +181,7 @@ const PlayerInfoBoard = ({
     } catch (err) {
       console.error('실시간 투타 정보 fetch 실패:', err);
     }
-  }, [pitcherPcode, batterPcode]);
+  }, [pitcherPcode, batterPcode, pitcherToday, onPitchCountUpdate]);
 
   useEffect(() => {
     if (!pitcherPcode || !batterPcode) return;
@@ -182,21 +222,62 @@ const PlayerInfoBoard = ({
     };
   }, [pitcherPcode, batterPcode, fetchData, isGameDone]);
 
-  const topPitches = pitchData
-    .filter((p) => p?.type && typeof p?.rate === 'number')
-    .sort((a, b) => b.rate - a.rate)
-    .slice(0, 2);
+  // 메모이제이션된 계산값들
+  const topPitches = useMemo(() => 
+    pitchData
+      .filter((p) => p?.type && typeof p?.rate === 'number')
+      .sort((a, b) => b.rate - a.rate)
+      .slice(0, 2),
+    [pitchData]
+  );
 
-  const directionMap = { left: '좌', center: '중', right: '우' } as const;
-  const topDirectionKey = (Object.entries(battedBall) as [keyof typeof directionMap, number][])
-    .reduce((max, cur) => (cur[1] > max[1] ? cur : max), ['left', -Infinity])[0];
-  const topDirection = directionMap[topDirectionKey] ?? '-';
+  const directionMap = useMemo(() => ({ left: '좌', center: '중', right: '우' } as const), []);
+  const topDirection = useMemo(() => {
+    const topDirectionKey = (Object.entries(battedBall) as [keyof typeof directionMap, number][])
+      .reduce((max, cur) => (cur[1] > max[1] ? cur : max), ['left', -Infinity])[0];
+    return directionMap[topDirectionKey] ?? '-';
+  }, [battedBall, directionMap]);
 
-  const batterTeamId = currentHalf === 'top' ? awayTeam : homeTeam;
-  const pitcherTeamId = currentHalf === 'top' ? homeTeam : awayTeam;
+  const batterTeamId = useMemo(() => 
+    currentHalf === 'top' ? awayTeam : homeTeam,
+    [currentHalf, awayTeam, homeTeam]
+  );
+  const pitcherTeamId = useMemo(() => 
+    currentHalf === 'top' ? homeTeam : awayTeam,
+    [currentHalf, homeTeam, awayTeam]
+  );
 
-  const batterImage = teamSymbolMap[batterTeamId.toLowerCase()];
-  const pitcherImage = teamSymbolMap[pitcherTeamId.toLowerCase()];
+  const batterImage = useMemo(() => 
+    teamSymbolMap[batterTeamId.toLowerCase()],
+    [batterTeamId]
+  );
+  const pitcherImage = useMemo(() => 
+    teamSymbolMap[pitcherTeamId.toLowerCase()],
+    [pitcherTeamId]
+  );
+
+  // 메모이제이션된 핸들러들
+  const handlePitcherPress = useCallback(async () => {
+    if (pitcherPcode) {
+      const playerId = await getPlayerIdFromPcode(pitcherPcode, true);
+      if (playerId) {
+        navigation.navigate('PitcherDetailScreen', { playerId: playerId });
+      } else {
+        console.error('투수 ID를 찾을 수 없습니다:', pitcherPcode);
+      }
+    }
+  }, [pitcherPcode, getPlayerIdFromPcode, navigation]);
+
+  const handleBatterPress = useCallback(async () => {
+    if (batterPcode) {
+      const playerId = await getPlayerIdFromPcode(batterPcode, false);
+      if (playerId) {
+        navigation.navigate('BatterDetailScreen', { playerId: playerId });
+      } else {
+        console.error('타자 ID를 찾을 수 없습니다:', batterPcode);
+      }
+    }
+  }, [batterPcode, getPlayerIdFromPcode, navigation]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -205,16 +286,7 @@ const PlayerInfoBoard = ({
       {/* 투수 */}
       <TouchableOpacity 
         style={styles.section}
-        onPress={async () => {
-          if (pitcherPcode) {
-            const playerId = await getPlayerIdFromPcode(pitcherPcode, true);
-            if (playerId) {
-              navigation.navigate('PitcherDetailScreen', { playerId: playerId });
-            } else {
-              console.error('투수 ID를 찾을 수 없습니다:', pitcherPcode);
-            }
-          }
-        }}
+        onPress={handlePitcherPress}
         disabled={!pitcherPcode}
       >
         <Image source={pitcherImage} style={styles.playerImage} />
@@ -250,16 +322,7 @@ const PlayerInfoBoard = ({
       {/* 타자 */}
       <TouchableOpacity 
         style={styles.section}
-        onPress={async () => {
-          if (batterPcode) {
-            const playerId = await getPlayerIdFromPcode(batterPcode, false);
-            if (playerId) {
-              navigation.navigate('BatterDetailScreen', { playerId: playerId });
-            } else {
-              console.error('타자 ID를 찾을 수 없습니다:', batterPcode);
-            }
-          }
-        }}
+        onPress={handleBatterPress}
         disabled={!batterPcode}
       >
         <Image source={batterImage} style={styles.playerImage} />
@@ -288,7 +351,7 @@ const PlayerInfoBoard = ({
   );
 };
 
-const StatsTable = ({ headers, rows }: { headers: string[]; rows: string[][] }) => (
+const StatsTable = memo(({ headers, rows }: { headers: string[]; rows: string[][] }) => (
   <View style={[styles.tableWrapper, { minHeight: 90 }]}>
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
       <View>
@@ -315,7 +378,7 @@ const StatsTable = ({ headers, rows }: { headers: string[]; rows: string[][] }) 
       </View>
     </ScrollView>
   </View>
-);
+));
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 16 },
@@ -375,4 +438,4 @@ const styles = StyleSheet.create({
   headerText: { fontWeight: 'bold' },
 });
 
-export default PlayerInfoBoard;
+export default memo(PlayerInfoBoard);

@@ -1,10 +1,17 @@
 // LiveGameScreen.tsx
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
+
+// API 응답 캐시
+const gameDataCache = new Map<string, { data: any; timestamp: number }>();
+const GAME_DATA_CACHE_DURATION = 3000; // 3초 캐시
+
+// 디바운싱을 위한 타이머 관리
+const debounceTimers = new Map<string, NodeJS.Timeout>();
 
 import { RootStackParamList } from '../navigation/RootStackParamList';
 import { useMyTeam } from '../hooks/useMyTeam';
@@ -26,13 +33,14 @@ import backgroundLiveActivityService from '../services/BackgroundLiveActivitySer
 
 type EffectType = 'HIT' | 'HR_OR_SCORE' | 'WIN';
 
-const LiveGameScreen = React.memo(() => {
+const LiveGameScreen = memo(() => {
   const route = useRoute<RouteProp<RootStackParamList, 'LiveGameScreen'>>();
   const navigation = useNavigation();
   const { gameId, homeTeamName, awayTeamName, homeTeam, awayTeam, status, homeScore: initialHomeScore, awayScore: initialAwayScore } = route.params as any;
 
-  const homeTeamId = teamNameToId[homeTeamName.split(' ')[0]];
-  const awayTeamId = teamNameToId[awayTeamName.split(' ')[0]];
+  // 메모이제이션된 팀 ID 계산
+  const homeTeamId = useMemo(() => teamNameToId[homeTeamName.split(' ')[0]], [homeTeamName]);
+  const awayTeamId = useMemo(() => teamNameToId[awayTeamName.split(' ')[0]], [awayTeamName]);
 
   const [selectedInning, setSelectedInning] = useState<number>(1);
   const [homeScore, setHomeScore] = useState<number>(typeof initialHomeScore === 'number' ? initialHomeScore : 0);
@@ -47,6 +55,44 @@ const LiveGameScreen = React.memo(() => {
   const { myTeamId } = useMyTeam();
   const [cheerSongEnabled, setCheerSongEnabled] = useState<boolean>(true);
   const [isLiveActivityActive, setIsLiveActivityActive] = useState<boolean>(false);
+
+  // 캐싱된 API 호출 함수
+  const fetchCachedGameData = useCallback(async (url: string) => {
+    const cacheKey = `game_${gameId}_${url}`;
+    const cached = gameDataCache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < GAME_DATA_CACHE_DURATION) {
+      return cached.data;
+    }
+
+    try {
+      const response = await axiosInstance.get(url);
+      const data = response.data;
+      
+      // 캐시에 저장
+      gameDataCache.set(cacheKey, { data, timestamp: Date.now() });
+      
+      return data;
+    } catch (error) {
+      console.log(`API 호출 실패: ${url}`, error);
+      return null;
+    }
+  }, [gameId]);
+
+  // 디바운싱된 함수 실행
+  const debouncedFunction = useCallback((key: string, fn: () => void, delay: number = 1000) => {
+    const existingTimer = debounceTimers.get(key);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+    
+    const timer = setTimeout(() => {
+      fn();
+      debounceTimers.delete(key);
+    }, delay);
+    
+    debounceTimers.set(key, timer);
+  }, []);
 
   const addEffectToQueue = useCallback((type: EffectType, id: string) => {
     effectQueueRef.current.push({ type, id });
@@ -234,50 +280,52 @@ const LiveGameScreen = React.memo(() => {
     return () => clearTimeout(timeoutId);
   }, [liveActivityData, isLiveActivityActive, gameId, status, myTeamId, homeTeam, awayTeam]);
 
+  // 메모이제이션된 효과 트리거 함수
+  const triggerFromCompletedAtbat = useCallback((
+    atbat: any | undefined,
+    isTopHalf: boolean,
+    inning: number,
+  ) => {
+    if (!atbat || !myTeamId) return;
+    if (!effectsEnabledRef.current) return; // 최초 1회 로딩 시에는 효과 트리거 스킵
+    const { main_result, full_result, appearance_number } = atbat;
+    const full = typeof full_result === 'string' ? full_result : '';
+    const hasConfirmedFull = full.length > 0 && full !== '(진행 중)';
+    if (!main_result && !hasConfirmedFull) return;
+    const atbatId = `${inning}_${isTopHalf ? 'top' : 'bot'}_${appearance_number}`;
+
+    const isMyTeamAtBat = (isTopHalf && awayTeam === myTeamId) || (!isTopHalf && homeTeam === myTeamId);
+    if (!isMyTeamAtBat) return;
+
+    const resultText: string = String(main_result || full);
+    const normalized = resultText.replace(/\s+/g, '');
+    const isHit = ['안타', '1루타', '2루타', '3루타']
+      .some((word) => normalized.includes(word.replace(/\s+/g, '')));
+    // 홈인 이벤트를 더 정확하게 감지 (예: "3루주자 노진혁 : 홈인")
+    const isHrOrScore = ['홈런', '득점', '홈인'].some((word) => resultText.includes(word)) ||
+                       resultText.includes('홈인') ||
+                       (full && full.includes('홈인'));
+
+    // 우선순위: HR_OR_SCORE > HIT
+    const now = Date.now();
+
+    if (isHrOrScore && status !== 'DONE') {
+      const effectKey = `${atbatId}_score_${appearance_number}`;
+      addEffectToQueue('HR_OR_SCORE', effectKey);
+    } else if (isHit && status !== 'DONE') {
+      const effectKey = `${atbatId}_hit_${appearance_number}`;
+      addEffectToQueue('HIT', effectKey);
+    }
+  }, [myTeamId, awayTeam, homeTeam, status, addEffectToQueue]);
+
   const fetchCurrentInning = useCallback(async () => {
     try {
-      const triggerFromCompletedAtbat = (
-        atbat: any | undefined,
-        isTopHalf: boolean,
-        inning: number,
-      ) => {
-        if (!atbat || !myTeamId) return;
-        if (!effectsEnabledRef.current) return; // 최초 1회 로딩 시에는 효과 트리거 스킵
-        const { main_result, full_result, appearance_number } = atbat;
-        const full = typeof full_result === 'string' ? full_result : '';
-        const hasConfirmedFull = full.length > 0 && full !== '(진행 중)';
-        if (!main_result && !hasConfirmedFull) return;
-        const atbatId = `${inning}_${isTopHalf ? 'top' : 'bot'}_${appearance_number}`;
 
-        const isMyTeamAtBat = (isTopHalf && awayTeam === myTeamId) || (!isTopHalf && homeTeam === myTeamId);
-        if (!isMyTeamAtBat) return;
-
-        const resultText: string = String(main_result || full);
-        const normalized = resultText.replace(/\s+/g, '');
-        const isHit = ['안타', '1루타', '2루타', '3루타']
-          .some((word) => normalized.includes(word.replace(/\s+/g, '')));
-        // 홈인 이벤트를 더 정확하게 감지 (예: "3루주자 노진혁 : 홈인")
-        const isHrOrScore = ['홈런', '득점', '홈인'].some((word) => resultText.includes(word)) ||
-                           resultText.includes('홈인') ||
-                           (full && full.includes('홈인'));
-
-        // 우선순위: HR_OR_SCORE > HIT
-        const now = Date.now();
-
-        if (isHrOrScore && status !== 'DONE') {
-          const effectKey = `${atbatId}_score_${appearance_number}`;
-          addEffectToQueue('HR_OR_SCORE', effectKey);
-        } else if (isHit && status !== 'DONE') {
-          const effectKey = `${atbatId}_hit_${appearance_number}`;
-          addEffectToQueue('HIT', effectKey);
-        }
-      };
-
-      // 연장 이닝(10회, 11회)을 병렬로 확인
+      // 연장 이닝(10회, 11회)을 병렬로 확인 (캐싱 적용)
       try {
         const [res10, res11] = await Promise.all([
-          axiosInstance.get(`/api/games/${gameId}/relay/10/`).catch(() => null),
-          axiosInstance.get(`/api/games/${gameId}/relay/11/`).catch(() => null)
+          fetchCachedGameData(`/api/games/${gameId}/relay/10/`),
+          fetchCachedGameData(`/api/games/${gameId}/relay/11/`)
         ]);
 
         let ongoingInning = null;
@@ -394,10 +442,11 @@ const LiveGameScreen = React.memo(() => {
       // 최신 이닝부터 확인하여 진행 중인 이닝을 빠르게 찾기
       let foundOngoing = false;
       
-      // 9회부터 1회까지 역순으로 확인 (최신 이닝 우선)
+      // 9회부터 1회까지 역순으로 확인 (최신 이닝 우선, 캐싱 적용)
       for (let inning = 9; inning >= 1 && !foundOngoing; inning--) {
         try {
-          const res = await axiosInstance.get(`/api/games/${gameId}/relay/${inning}/`);
+          const res = await fetchCachedGameData(`/api/games/${gameId}/relay/${inning}/`);
+          if (!res) continue;
           const data = res.data?.data;
           
           if (!data) continue;
@@ -489,11 +538,12 @@ const LiveGameScreen = React.memo(() => {
         }
       }
       
-      // 진행 중인 타석이 없으면, 우리 팀이 공격했던 half의 최근 확정 타석만 검사
+      // 진행 중인 타석이 없으면, 우리 팀이 공격했던 half의 최근 확정 타석만 검사 (캐싱 적용)
       if (!foundOngoing) {
         for (let inning = 9; inning >= 1; inning--) {
           try {
-            const res = await axiosInstance.get(`/api/games/${gameId}/relay/${inning}/`);
+            const res = await fetchCachedGameData(`/api/games/${gameId}/relay/${inning}/`);
+            if (!res) continue;
             const data = res.data?.data;
             
             if (!data) continue;
@@ -530,7 +580,12 @@ const LiveGameScreen = React.memo(() => {
       // 최초 1회 데이터 로딩이 끝나면 이후부터 효과 활성화
       if (!effectsEnabledRef.current) effectsEnabledRef.current = true;
     }
-  }, [gameId, myTeamId, lastEffectId, homeTeam, awayTeam, status]);
+  }, [gameId, myTeamId, homeTeam, awayTeam, status, triggerFromCompletedAtbat, fetchCachedGameData]);
+
+  // 디바운싱된 데이터 새로고침
+  const debouncedFetchCurrentInning = useCallback(() => {
+    debouncedFunction('fetchCurrentInning', fetchCurrentInning, 500);
+  }, [fetchCurrentInning, debouncedFunction]);
 
   useEffect(() => {
     fetchCurrentInning();
@@ -540,8 +595,8 @@ const LiveGameScreen = React.memo(() => {
   useFocusEffect(
     useCallback(() => {
       console.log('🔍 LiveGameScreen 포커스 - 데이터 새로고침');
-      fetchCurrentInning();
-    }, [fetchCurrentInning])
+      debouncedFetchCurrentInning();
+    }, [debouncedFetchCurrentInning])
   );
 
   // 경기 종료 시 1회를 기본값으로 설정 (빠른 로딩을 위해)
@@ -572,23 +627,24 @@ const LiveGameScreen = React.memo(() => {
   );
 
 
+  // 폴링 간격을 늘려서 성능 최적화 (15초로 변경)
   useEffect(() => {
     if (status === 'DONE') return;
     const intervalId = setInterval(() => {
-      fetchCurrentInning();
-    }, 10000); // 10초로 통일
+      debouncedFetchCurrentInning();
+    }, 15000); // 15초로 변경하여 성능 최적화
     return () => clearInterval(intervalId);
-  }, [status, fetchCurrentInning]);
+  }, [status, debouncedFetchCurrentInning]);
 
-  // 투구수가 변할 때만 즉시 업데이트 (성능 최적화)
+  // 투구수가 변할 때만 즉시 업데이트 (성능 최적화, 디바운싱 적용)
   const lastPitchFetchRef = useRef<number>(0);
   useEffect(() => {
     if (status === 'DONE') return;
     const now = Date.now();
-    if (now - lastPitchFetchRef.current < 1000) return; // 1초 디바운싱
+    if (now - lastPitchFetchRef.current < 2000) return; // 2초 디바운싱으로 변경
     lastPitchFetchRef.current = now;
-    fetchCurrentInning();
-  }, [pitchCount, status, fetchCurrentInning]);
+    debouncedFetchCurrentInning();
+  }, [pitchCount, status, debouncedFetchCurrentInning]);
 
   const renderEffect = useCallback(() => {
     if (!effectType) return null;
@@ -658,14 +714,29 @@ const LiveGameScreen = React.memo(() => {
     );
   }, [effectType, effectRef, playNextEffect]);
 
+  // 메모이제이션된 헤더 제목
+  const headerTitle = useMemo(() => 
+    ` ${awayTeamName.split(' ')[0]} vs ${homeTeamName.split(' ')[0]}`,
+    [awayTeamName, homeTeamName]
+  );
+
+  // 메모이제이션된 백 핸들러
+  const handleBackPress = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
+  // 메모이제이션된 팀 이름들
+  const awayTeamDisplayName = useMemo(() => awayTeamName.split(' '), [awayTeamName]);
+  const homeTeamDisplayName = useMemo(() => homeTeamName.split(' '), [homeTeamName]);
+
   return (
     <View style={styles.mainContainer}>
       {renderEffect()}
       <ScrollView style={styles.container}>
         <Header
-          title={` ${awayTeamName.split(' ')[0]} vs ${homeTeamName.split(' ')[0]}`}
+          title={headerTitle}
           showBackButton
-          onBackPress={() => navigation.goBack()}
+          onBackPress={handleBackPress}
         />
 
         {status !== 'DONE' && (
@@ -685,8 +756,8 @@ const LiveGameScreen = React.memo(() => {
           <View style={styles.teamBlockContainer}>
             <Image source={teamLogoMap[awayTeamId]} style={styles.logo} />
             <View style={styles.teamBlockLeft}>
-              <Text style={styles.teamLabel}>{awayTeamName.split(' ')[0]}</Text>
-              <Text style={styles.teamLabel}>{awayTeamName.split(' ')[1]}</Text>
+              <Text style={styles.teamLabel}>{awayTeamDisplayName[0]}</Text>
+              <Text style={styles.teamLabel}>{awayTeamDisplayName[1]}</Text>
             </View>
           </View>
 
@@ -710,8 +781,8 @@ const LiveGameScreen = React.memo(() => {
 
           <View style={styles.teamBlockContainer}>
             <View style={styles.teamBlockRight}>
-              <Text style={styles.teamLabel}>{homeTeamName.split(' ')[0]}</Text>
-              <Text style={styles.teamLabel}>{homeTeamName.split(' ')[1]}</Text>
+              <Text style={styles.teamLabel}>{homeTeamDisplayName[0]}</Text>
+              <Text style={styles.teamLabel}>{homeTeamDisplayName[1]}</Text>
             </View>
             <Image source={teamLogoMap[homeTeamId]} style={styles.logo} />
           </View>
