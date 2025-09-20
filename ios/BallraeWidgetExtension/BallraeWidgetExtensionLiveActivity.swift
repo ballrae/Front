@@ -24,7 +24,8 @@ struct BallraeLiveActivity: Widget {
                     // 원정팀 (왼쪽)
                     VStack(spacing: 4) {
                         // 팀 심볼
-                        Image("\(context.state.awayTeam.lowercased())_simbol")
+                        let awayTeamId = getTeamId(from: context.state.awayTeam)
+                        Image("\(awayTeamId.lowercased())_simbol")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 40, height: 40)
@@ -55,7 +56,8 @@ struct BallraeLiveActivity: Widget {
                     // 홈팀 (오른쪽)
                     VStack(spacing: 4) {
                         // 팀 심볼
-                        Image("\(context.state.homeTeam.lowercased())_simbol")
+                        let homeTeamId = getTeamId(from: context.state.homeTeam)
+                        Image("\(homeTeamId.lowercased())_simbol")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 40, height: 40)
@@ -110,7 +112,8 @@ struct BallraeLiveActivity: Widget {
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     VStack(spacing: 6) {
-                        Image("\(context.state.awayTeam.lowercased())_simbol")
+                        let awayTeamId = getTeamId(from: context.state.awayTeam)
+                        Image("\(awayTeamId.lowercased())_simbol")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 36, height: 36)
@@ -130,7 +133,8 @@ struct BallraeLiveActivity: Widget {
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     VStack(spacing: 6) {
-                        Image("\(context.state.homeTeam.lowercased())_simbol")
+                        let homeTeamId = getTeamId(from: context.state.homeTeam)
+                        Image("\(homeTeamId.lowercased())_simbol")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 36, height: 36)
@@ -209,7 +213,8 @@ struct BallraeLiveActivity: Widget {
                 }
             } compactLeading: {
                 HStack(spacing: 4) {
-                    Image("\(context.state.awayTeam.lowercased())_simbol")
+                    let awayTeamId = getTeamId(from: context.state.awayTeam)
+                    Image("\(awayTeamId.lowercased())_simbol")
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 18, height: 18)
@@ -227,7 +232,8 @@ struct BallraeLiveActivity: Widget {
                         .foregroundColor(Color(red: 0.25, green: 0.54, blue: 0.13))
                         .lineLimit(nil) // 줄 수 제한 없음
                         .fixedSize(horizontal: false, vertical: true) // 세로로 확장 가능
-                    Image("\(context.state.homeTeam.lowercased())_simbol")
+                    let homeTeamId = getTeamId(from: context.state.homeTeam)
+                    Image("\(homeTeamId.lowercased())_simbol")
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 18, height: 18)
@@ -239,4 +245,22 @@ struct BallraeLiveActivity: Widget {
             }
         }
     }
+}
+
+// 팀 이름을 팀 ID로 변환하는 함수
+func getTeamId(from teamName: String) -> String {
+    let teamNameMap: [String: String] = [
+        "두산 베어스": "DS",
+        "롯데 자이언츠": "LT", 
+        "삼성 라이온즈": "SS",
+        "키움 히어로즈": "HE",
+        "한화 이글스": "HH",
+        "KIA 타이거즈": "KA",
+        "KT 위즈": "KT",
+        "LG 트윈스": "LG",
+        "NC 다이노스": "NC",
+        "SSG 랜더스": "SL"
+    ]
+    
+    return teamNameMap[teamName] ?? teamName
 }
