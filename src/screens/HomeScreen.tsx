@@ -62,7 +62,7 @@ const HomeScreen = () => {
   const [showCalendar, setShowCalendar] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const prevScoreMapRef = useRef<Record<string, number>>({}); // gameId -> my팀 스코어
+  const prevScoreMapRef = useRef<Record<string, { homeScore: number; awayScore: number }>>({}); // gameId -> { homeScore, awayScore }
   const lastTriggeredRef = useRef<string>('');
   const [showScoreEffect, setShowScoreEffect] = useState(false);
   const hasShownEffectRef = useRef<boolean>(false); // 이팩트를 이미 보여줬는지 체크
@@ -112,7 +112,7 @@ const HomeScreen = () => {
 
         setGames(parsedGames);
 
-        // 마이팀 득점 감지 → 홈런/득점 이팩트 1회 재생 (화면에 처음 들어왔을 때만)
+        // 스코어 저장 및 마이팀 득점 감지 → 홈런/득점 이팩트 1회 재생 (화면에 처음 들어왔을 때만)
         if (myTeamId && !hasShownEffectRef.current) {
           // 가장 최근 득점을 찾기 위해 모든 경기를 순회하면서 최신 득점 찾기
           let latestScore: { gameId: string; score: number; timestamp: string } | null = null;
@@ -120,18 +120,28 @@ const HomeScreen = () => {
           parsedGames.forEach((g: Game) => {
             if (g.status !== 'LIVE') return;
             if (g.homeTeam !== myTeamId && g.awayTeam !== myTeamId) return;
-            const myScore = g.homeTeam === myTeamId ? g.homeScore : g.awayScore;
-            if (typeof myScore !== 'number' || myScore === 0) return;
+            
+            const currentHomeScore = g.homeScore ?? 0;
+            const currentAwayScore = g.awayScore ?? 0;
+            const myScore = g.homeTeam === myTeamId ? currentHomeScore : currentAwayScore;
             
             // 이전 스코어와 비교해서 득점이 있었는지 확인
-            const prev = prevScoreMapRef.current[g.id];
-            if (typeof prev === 'number' && myScore > prev) {
+            const prevScore = prevScoreMapRef.current[g.id];
+            if (prevScore && myScore > (g.homeTeam === myTeamId ? prevScore.homeScore : prevScore.awayScore)) {
               // 가장 최근 득점 업데이트
               if (!latestScore || myScore > latestScore.score) {
                 latestScore = { gameId: g.id, score: myScore, timestamp: Date.now().toString() };
               }
             }
-            prevScoreMapRef.current[g.id] = myScore;
+            
+            // 스코어가 변경되었을 때만 이전 스코어 업데이트 (더 높은 점수로만)
+            if (!prevScore || currentHomeScore !== prevScore.homeScore || currentAwayScore !== prevScore.awayScore) {
+              // 현재 스코어가 이전 스코어보다 높거나 같을 때만 업데이트
+              if (!prevScore || 
+                  (currentHomeScore >= prevScore.homeScore && currentAwayScore >= prevScore.awayScore)) {
+                prevScoreMapRef.current[g.id] = { homeScore: currentHomeScore, awayScore: currentAwayScore };
+              }
+            }
           });
 
           // 가장 최근 득점에 대해서만 이팩트 재생
@@ -300,9 +310,33 @@ const HomeScreen = () => {
                     <Text style={styles.cancelledText}>경기 취소</Text>
                   ) : (
                     <>
-                      <Text style={styles.score}>{item.awayScore ?? '0'}</Text>
+                      <Text style={styles.score}>
+                        {(() => {
+                          const currentAwayScore = item.awayScore ?? 0;
+                          const currentHomeScore = item.homeScore ?? 0;
+                          const prevScore = prevScoreMapRef.current[item.id];
+                          
+                          // 현재 스코어가 0:0이고 이전 스코어가 있으면 이전 스코어 표시
+                          if (currentAwayScore === 0 && currentHomeScore === 0 && prevScore) {
+                            return prevScore.awayScore;
+                          }
+                          return currentAwayScore;
+                        })()}
+                      </Text>
                       <Text style={styles.vs}>vs</Text>
-                      <Text style={styles.score}>{item.homeScore ?? '0'}</Text>
+                      <Text style={styles.score}>
+                        {(() => {
+                          const currentAwayScore = item.awayScore ?? 0;
+                          const currentHomeScore = item.homeScore ?? 0;
+                          const prevScore = prevScoreMapRef.current[item.id];
+                          
+                          // 현재 스코어가 0:0이고 이전 스코어가 있으면 이전 스코어 표시
+                          if (currentAwayScore === 0 && currentHomeScore === 0 && prevScore) {
+                            return prevScore.homeScore;
+                          }
+                          return currentHomeScore;
+                        })()}
+                      </Text>
                     </>
                   )}
                 </View>

@@ -13,6 +13,8 @@ import teamSymbolMap from '../../constants/teamSymbols';
 import teamNameMap from '../../constants/teamNames';
 import axiosInstance from '../../utils/axiosInstance';
 import mainResultColorMap, { mainresultCodeMap } from '../../constants/mainresultCodeMap';
+import { generateGameComment, extractSituationFromAtBat } from '../../utils/gameCommentGenerator';
+import backgroundLiveActivityService from '../../services/BackgroundLiveActivityService';
 
 type LiveTextBroadcastProps = {
   gameId: string;
@@ -63,6 +65,129 @@ const LiveTextBroadcast = ({
   const allInnings = useMemo(() => {
     return Array.from({ length: maxInning }, (_, i) => i + 1);
   }, [maxInning]);
+
+  // 멘트 생성 함수 - 현재 진행 중인 투타 정보 기반
+  const generateCommentsForNewData = useCallback((mappedTopData: any[], mappedBotData: any[], rawTopAtBats: any[], rawBotAtBats: any[]) => {
+    console.log('🎤 멘트 생성 시작 - 이닝:', selectedInning);
+    console.log('🎤 [디버깅] rawTopAtBats 길이:', rawTopAtBats.length);
+    console.log('🎤 [디버깅] rawBotAtBats 길이:', rawBotAtBats.length);
+    
+    // 현재 진행 중인 타석 찾기
+    let currentAtBat = null;
+    let currentHalf: 'top' | 'bot' | null = null;
+    
+    // 말 이닝에서 진행 중인 타석 찾기
+    const ongoingBotAtBat = rawBotAtBats.find((atBat: any) => atBat.full_result === '(진행 중)');
+    if (ongoingBotAtBat) {
+      currentAtBat = ongoingBotAtBat;
+      currentHalf = 'bot';
+    } else {
+      // 초 이닝에서 진행 중인 타석 찾기
+      const ongoingTopAtBat = rawTopAtBats.find((atBat: any) => atBat.full_result === '(진행 중)');
+      if (ongoingTopAtBat) {
+        currentAtBat = ongoingTopAtBat;
+        currentHalf = 'top';
+      }
+    }
+
+    console.log('🎤 [디버깅] 현재 진행 중인 타석:', currentAtBat);
+    console.log('🎤 [디버깅] 현재 하프:', currentHalf);
+
+    let latestComment = '';
+
+    // 현재 진행 중인 타석이 있으면 해당 타석으로 멘트 생성
+    if (currentAtBat && currentHalf) {
+      const teamName = currentHalf === 'top' ? awayTeam : homeTeam;
+      
+      console.log(`🎤 [디버깅] 현재 투타 정보 - 팀: ${teamName}, 하프: ${currentHalf}`);
+      console.log(`🎤 [디버깅] 투수: ${currentAtBat.pitcher?.player_name}, 타자: ${currentAtBat.actual_batter?.player_name}`);
+      
+      // 현재 투타 정보를 기반으로 상황 생성
+      const situation = {
+        playerName: currentAtBat.actual_batter?.player_name || '타자',
+        teamName: teamName,
+        pitcherName: currentAtBat.pitcher?.player_name || '투수',
+        inning: selectedInning,
+        half: currentHalf,
+        outs: currentAtBat.outs || 0,
+        score: currentAtBat.score || '0:0',
+        onBase: currentAtBat.on_base || { base1: '0', base2: '0', base3: '0' },
+        mainResult: currentAtBat.main_result || '',
+        fullResult: currentAtBat.full_result || '',
+        // 현재 진행 중인 타석이므로 특별한 상황으로 처리
+        isOngoing: true
+      };
+      
+      console.log(`🎤 [디버깅] 생성된 상황:`, situation);
+      
+      // 현재 진행 중인 타석에 대한 멘트 생성
+      const eventText = Array.isArray(currentAtBat.event) ? currentAtBat.event[0] : currentAtBat.event;
+      const comment = generateGameComment(situation, eventText);
+      console.log(`🎤 [현재 투타] ${situation.playerName} vs ${situation.pitcherName}: ${comment}`);
+      
+      latestComment = comment;
+      
+      // 라이브 액티비티에 전달할 수 있도록 콜백 호출
+      if (onCommentGenerated) {
+        onCommentGenerated(comment);
+      }
+    } else {
+      // 진행 중인 타석이 없으면 최근 완료된 타석들에서 멘트 생성
+      const recentAtBats = [
+        ...rawBotAtBats.slice(-1), // 말 이닝 최근 1개
+        ...rawTopAtBats.slice(-1)  // 초 이닝 최근 1개
+      ];
+
+      console.log('🎤 [디버깅] 진행 중인 타석 없음, 최근 완료된 타석들로 멘트 생성:', recentAtBats.length);
+
+      recentAtBats.forEach((atBat, index) => {
+        console.log(`🎤 [디버깅] atBat ${index}:`, atBat);
+        
+        if (!atBat) {
+          console.log(`🎤 [디버깅] atBat ${index} is null/undefined`);
+          return;
+        }
+
+        const isTop = index >= 1; // 처음 1개는 말 이닝, 나머지는 초 이닝
+        const teamName = isTop ? awayTeam : homeTeam;
+        const half = isTop ? 'top' : 'bot';
+        
+        console.log(`🎤 [디버깅] 처리 중 - isTop: ${isTop}, teamName: ${teamName}, half: ${half}`);
+        
+        const situation = extractSituationFromAtBat(atBat, teamName, selectedInning, half);
+        console.log(`🎤 [디버깅] extracted situation:`, situation);
+        
+        if (situation) {
+          // event 필드 추출 (배열이면 첫 번째 요소 사용)
+          const eventText = Array.isArray(atBat.event) ? atBat.event[0] : atBat.event;
+          const comment = generateGameComment(situation, eventText);
+          console.log(`🎤 [${isTop ? '초' : '말'} 이닝] ${situation.playerName}: ${comment}`);
+          console.log(`🎤 [디버깅] main_result: ${atBat.main_result}, full_result: ${atBat.full_result}, event: ${eventText}`);
+          
+          // 가장 최근 멘트 저장
+          latestComment = comment;
+          
+          // 라이브 액티비티에 전달할 수 있도록 콜백 호출
+          if (onCommentGenerated) {
+            onCommentGenerated(comment);
+          }
+        } else {
+          console.log(`🎤 [디버깅] situation이 null입니다. atBat:`, atBat);
+        }
+      });
+    }
+
+    console.log(`🎤 [디버깅] 최종 latestComment:`, latestComment);
+
+    // 라이브 액티비티 서비스에 최신 멘트 전달
+    if (latestComment && backgroundLiveActivityService.isPollingActive()) {
+      console.log('🎤 라이브 액티비티에 멘트 전달:', latestComment);
+      backgroundLiveActivityService.setLatestComment(latestComment);
+      backgroundLiveActivityService.setGameId(gameId);
+    } else {
+      console.log('🎤 [디버깅] 멘트 전달 안됨 - latestComment:', latestComment, 'isPollingActive:', backgroundLiveActivityService.isPollingActive());
+    }
+  }, [selectedInning, awayTeam, homeTeam, onCommentGenerated, gameId]);
 
 
   useEffect(() => {
@@ -150,6 +275,8 @@ const LiveTextBroadcast = ({
           setTopData(mappedTopData);
           setBotData(mappedBotData);
           
+          // 멘트 생성 및 디버깅
+          generateCommentsForNewData(mappedTopData, mappedBotData, topAtBats, botAtBats);
           
           // 데이터가 변경되었을 때만 콘솔에 로그 (디버깅용)
          

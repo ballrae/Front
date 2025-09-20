@@ -6,10 +6,11 @@ import Svg, { Polygon, Circle, Text as SvgText } from 'react-native-svg';
 interface RadarChartProps {
   labels: string[];
   values: number[]; // 0~100 범위 값
+  percentiles?: number[]; // 퍼센테이지 배열 추가
   size?: number;
 }
 
-const RadarChart: React.FC<RadarChartProps> = ({ labels, values, size = 240 }) => {
+const RadarChart: React.FC<RadarChartProps> = ({ labels, values, percentiles, size = 240 }) => {
   const paddedSize = size + 100; // 좌우 라벨 잘림 방지용
   const center = paddedSize / 2;
   const numOfPoints = labels.length;
@@ -105,17 +106,30 @@ const RadarChart: React.FC<RadarChartProps> = ({ labels, values, size = 240 }) =
           if (labels[i] === '수비RAA%') extraOffsetX = 8;
 
           return (
-            <SvgText
-              key={`label-${i}`}
-              x={p.x + offsetX + extraOffsetX}
-              y={p.y + offsetY}
-              fontSize="12"
-              fill="#000"
-              textAnchor="middle"
-              alignmentBaseline="middle"
-            >
-              {labels[i]}
-            </SvgText>
+            <React.Fragment key={`label-${i}`}>
+              <SvgText
+                x={p.x + offsetX + extraOffsetX}
+                y={p.y + offsetY}
+                fontSize="12"
+                fill="#000"
+                textAnchor="middle"
+                alignmentBaseline="middle"
+              >
+                {labels[i]}
+              </SvgText>
+              {percentiles && percentiles[i] !== undefined && (
+                <SvgText
+                  x={p.x + offsetX + extraOffsetX}
+                  y={p.y + offsetY + 15}
+                  fontSize="10"
+                  fill="#408A21"
+                  textAnchor="middle"
+                  alignmentBaseline="middle"
+                >
+                  {percentiles[i]}%
+                </SvgText>
+              )}
+            </React.Fragment>
           );
         })}
       </Svg>
