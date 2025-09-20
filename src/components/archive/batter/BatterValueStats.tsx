@@ -4,43 +4,43 @@ import VerticalSlider from '../VerticalSlider';
 import RadarChart from './RadarChart';
 
 interface BatterValueStatsProps {
-  attackRAA: number;
-  defenseRAA: number;
-  baseRAA: number;
-  throwRAA: number;
-  runRAA: number;
-  overallRAA: number;
-  attackRAAPercentile?: number;
-  defenseRAAPercentile?: number;
-  baseRAAPercentile?: number;
-  throwRAAPercentile?: number;
-  runRAAPercentile?: number;
-  overallRAAPercentile?: number;
+  offensiveRAA: number;
+  defensiveRAA: number;
+  battingRAA: number;
+  baserunningRAA: number;
+  fieldingRAA: number;
+  totalRAA: number;
+  offensiveRAAPercentile?: number;
+  defensiveRAAPercentile?: number;
+  battingRAAPercentile?: number;
+  baserunningRAAPercentile?: number;
+  fieldingRAAPercentile?: number;
+  totalRAAPercentile?: number;
 }
 
 const BatterValueStats: React.FC<BatterValueStatsProps> = ({
-  attackRAA,
-  defenseRAA,
-  baseRAA,
-  throwRAA,
-  runRAA,
-  overallRAA,
-  attackRAAPercentile,
-  defenseRAAPercentile,
-  baseRAAPercentile,
-  throwRAAPercentile,
-  runRAAPercentile,
-  overallRAAPercentile,
+  offensiveRAA,
+  defensiveRAA,
+  battingRAA,
+  baserunningRAA,
+  fieldingRAA,
+  totalRAA,
+  offensiveRAAPercentile,
+  defensiveRAAPercentile,
+  battingRAAPercentile,
+  baserunningRAAPercentile,
+  fieldingRAAPercentile,
+  totalRAAPercentile,
 }) => {
-  const chartLabels = ['공격RAA%', '수비RAA%', '주루RAA%', '타격RAA%', '필딩RAA%'];
-  const chartValues = [attackRAA, defenseRAA, runRAA, throwRAA, baseRAA];
-  const chartPercentiles = [
-    attackRAAPercentile,
-    defenseRAAPercentile, 
-    runRAAPercentile,
-    throwRAAPercentile,
-    baseRAAPercentile
-  ].filter((percentile): percentile is number => percentile !== undefined);
+  const chartLabels = ['공격RAA', '수비RAA', '타격RAA', '주루RAA', '필딩RAA'];
+  // 동그라미에 표시할 값은 퍼센테이지
+  const chartValues = [
+    offensiveRAAPercentile || 0,
+    defensiveRAAPercentile || 0, 
+    battingRAAPercentile || 0,
+    baserunningRAAPercentile || 0,
+    fieldingRAAPercentile || 0
+  ];
 
   return (
     <View style={styles.container}>
@@ -50,15 +50,13 @@ const BatterValueStats: React.FC<BatterValueStatsProps> = ({
           <RadarChart 
             labels={chartLabels} 
             values={chartValues} 
-            percentiles={chartPercentiles}
             size={220} 
           />
         </View>
         <View style={styles.sliderWrapper}>
           <VerticalSlider 
-            label="종합RAA%" 
-            value={overallRAA} 
-            percentile={overallRAAPercentile}
+            label="종합RAA" 
+            value={totalRAAPercentile || 0} 
           />
         </View>
       </View>

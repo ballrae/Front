@@ -123,16 +123,16 @@ const PlayerInfoBoard = ({
         '시즌',
         String(pitcherSeason.games ?? 0),
         String(pitcherSeason.innings ?? 0),
-        '-',
-        '-',
+        String(pitcherSeason.win ?? 0),
+        String(pitcherSeason.lose ?? 0),
         (pitcherSeason.era ?? 0).toFixed(2),
       ];
       const pitcherCareerRow = [
         '3시즌',
         String(pitcherCareer.games ?? 0),
         String(pitcherCareer.innings ?? 0),
-        '-',
-        '-',
+        String(pitcherCareer.win ?? 0),
+        String(pitcherCareer.lose ?? 0),
         (pitcherCareer.era ?? 0).toFixed(2),
       ];
 

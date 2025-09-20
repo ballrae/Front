@@ -46,12 +46,21 @@ interface BatterData {
   BABIP_percentile: number;
   IsoP_percentile: number;
   BBK_percentile: number;
-  attackRAA: number;
-  defenseRAA: number;
-  baseRAA: number;
-  throwRAA: number;
-  runRAA: number;
-  overallRAA: number;
+  // RAA 데이터
+  raa_data?: {
+    total_raa: number;
+    total_raa_percentile: number;
+    offensive_raa: number;
+    offensive_raa_percentile: number;
+    defensive_raa: number;
+    defensive_raa_percentile: number;
+    batting_raa: number;
+    batting_raa_percentile: number;
+    baserunning_raa: number;
+    baserunning_raa_percentile: number;
+    fielding_raa: number;
+    fielding_raa_percentile: number;
+  };
 }
 
 const BatterDetailScreen = () => {
@@ -101,12 +110,7 @@ useEffect(() => {
         BABIP_percentile: metrics.babip_percentile ?? 0,
         IsoP_percentile: metrics.iso_percentile ?? 0,
         BBK_percentile: metrics.bb_k_percentile ?? 0,
-        attackRAA: 0,
-        defenseRAA: 0,
-        baseRAA: 0,
-        throwRAA: 0,
-        runRAA: 0,
-        overallRAA: 0,
+        raa_data: raw.raa_data ?? undefined,
       };
 
       setBatter(mappedBatter);
@@ -174,12 +178,18 @@ useEffect(() => {
       />
 
       <BatterValueStats
-        attackRAA={batter.attackRAA}
-        defenseRAA={batter.defenseRAA}
-        baseRAA={batter.baseRAA}
-        throwRAA={batter.throwRAA}
-        runRAA={batter.runRAA}
-        overallRAA={batter.overallRAA}
+        offensiveRAA={batter.raa_data?.offensive_raa ?? 0}
+        defensiveRAA={batter.raa_data?.defensive_raa ?? 0}
+        battingRAA={batter.raa_data?.batting_raa ?? 0}
+        baserunningRAA={batter.raa_data?.baserunning_raa ?? 0}
+        fieldingRAA={batter.raa_data?.fielding_raa ?? 0}
+        totalRAA={batter.raa_data?.total_raa ?? 0}
+        offensiveRAAPercentile={batter.raa_data?.offensive_raa_percentile}
+        defensiveRAAPercentile={batter.raa_data?.defensive_raa_percentile}
+        battingRAAPercentile={batter.raa_data?.batting_raa_percentile}
+        baserunningRAAPercentile={batter.raa_data?.baserunning_raa_percentile}
+        fieldingRAAPercentile={batter.raa_data?.fielding_raa_percentile}
+        totalRAAPercentile={batter.raa_data?.total_raa_percentile}
       />
     </ScrollView>
   );

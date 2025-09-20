@@ -4,12 +4,11 @@ import { View, Text, StyleSheet } from 'react-native';
 interface VerticalSliderProps {
   value: number; // 0 ~ 100
   label: string;
-  percentile?: number; // 퍼센테이지 추가
 }
 
-const VerticalSlider: React.FC<VerticalSliderProps> = ({ value, label, percentile }) => {
+const VerticalSlider: React.FC<VerticalSliderProps> = ({ value, label }) => {
   const graphHeight = 140;
-  const markerTop = Math.min(Math.max((100 - value) / 100 * graphHeight, 10), 125);
+  const markerTop = Math.min(Math.max((100 - value) / 100 * graphHeight, 0), graphHeight);
   return (
     <View style={styles.container}>
       <View style={styles.graph}>
@@ -22,9 +21,6 @@ const VerticalSlider: React.FC<VerticalSliderProps> = ({ value, label, percentil
         </View>
       </View>
       <Text style={styles.label}>{label}</Text>
-      {percentile !== undefined && (
-        <Text style={styles.percentileText}>{percentile}%</Text>
-      )}
     </View>
   );
 };
@@ -84,12 +80,5 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     marginTop: 12,
     textAlign: 'center',
-  },
-  percentileText: {
-    fontSize: 10,
-    fontWeight: '600',
-    marginTop: 4,
-    textAlign: 'center',
-    color: '#408A21',
   },
 });
