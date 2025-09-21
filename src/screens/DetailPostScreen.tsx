@@ -171,21 +171,38 @@ const DetailPostScreen = () => {
 
   // 필터링 적용한 댓글 작성 함수
   const handleCommentSubmit = async () => {
-    if (!commentText.trim()) return;
+    console.log('📝 [handleCommentSubmit] 시작 - commentText:', commentText);
+    
+    if (!commentText.trim()) {
+      console.log('📝 [handleCommentSubmit] 댓글 텍스트가 비어있음');
+      return;
+    }
+    
     try {
-      console.log('📝 댓글 작성 시작:', commentText);
-      const filteredComment = await filterText(commentText); // 욕설 필터링 API 호출
-      console.log('📝 필터링된 댓글:', filteredComment);
+      console.log('📝 [handleCommentSubmit] 댓글 작성 시작:', commentText);
+      console.log('📝 [handleCommentSubmit] teamId:', teamId, 'postId:', postId);
       
-      await axiosInstance.post(`/api/posts/${teamId}/${postId}/comments/`, {
+      const filteredComment = await filterText(commentText); // 욕설 필터링 API 호출
+      console.log('📝 [handleCommentSubmit] 필터링된 댓글:', filteredComment);
+      
+      console.log('📝 [handleCommentSubmit] API 요청 시작');
+      const postResponse = await axiosInstance.post(`/api/posts/${teamId}/${postId}/comments/`, {
         comment_content: filteredComment,
       });
-      setCommentText('');
+      console.log('📝 [handleCommentSubmit] API 요청 성공:', postResponse.data);
       
+      setCommentText('');
+      console.log('📝 [handleCommentSubmit] 댓글 텍스트 초기화 완료');
+      
+      console.log('📝 [handleCommentSubmit] 댓글 목록 새로고침 시작');
       const res = await axiosInstance.get(`/api/posts/${teamId}/${postId}/comments/`);
+      console.log('📝 [handleCommentSubmit] 댓글 목록 응답:', res.data);
+      
       setComments(res.data.data);
+      console.log('📝 [handleCommentSubmit] 댓글 상태 업데이트 완료');
       
       // 새로 추가된 댓글들도 필터링
+      console.log('📝 [handleCommentSubmit] 댓글 필터링 시작');
       const filteredCommentsData = await Promise.all(
         res.data.data.map(async (comment: CommentItem) => ({
           ...comment,
@@ -193,9 +210,17 @@ const DetailPostScreen = () => {
         }))
       );
       setFilteredComments(filteredCommentsData);
-      console.log('📝 최종 필터링된 댓글 목록:', filteredCommentsData);
+      console.log('📝 [handleCommentSubmit] 최종 필터링된 댓글 목록:', filteredCommentsData);
+      console.log('📝 [handleCommentSubmit] 댓글 작성 완료!');
     } catch (err: any) {
-      console.error('댓글 작성 에러:', err);
+      console.error('📝 [handleCommentSubmit] 댓글 작성 에러!');
+      console.error('📝 [handleCommentSubmit] 에러 타입:', typeof err);
+      console.error('📝 [handleCommentSubmit] 에러 메시지:', err.message);
+      console.error('📝 [handleCommentSubmit] 에러 코드:', err.code);
+      console.error('📝 [handleCommentSubmit] 응답 상태:', err.response?.status);
+      console.error('📝 [handleCommentSubmit] 응답 데이터:', err.response?.data);
+      console.error('📝 [handleCommentSubmit] 전체 에러:', err);
+      
       Alert.alert('댓글 등록 실패', '잠시 후 다시 시도해주세요.');
     }
   };
@@ -269,7 +294,13 @@ const DetailPostScreen = () => {
               placeholderTextColor="#aaa"
               multiline
             />
-            <TouchableOpacity style={styles.sendButton} onPress={handleCommentSubmit}>
+            <TouchableOpacity 
+              style={styles.sendButton} 
+              onPress={() => {
+                console.log('📝 [버튼 클릭] 댓글 작성 버튼 클릭됨');
+                handleCommentSubmit();
+              }}
+            >
               <Text style={styles.sendButtonText}>입력</Text>
             </TouchableOpacity>
           </View>

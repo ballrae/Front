@@ -28,6 +28,7 @@ class BackgroundLiveActivityService {
   private appStateSubscription: any = null;
   private errorCount: number = 0;
   private maxErrors: number = 5; // 최대 5번 에러 후 중지
+  private previousScore: string = '0:0'; // 이전 스코어 추적
   private latestComment: string = ''; // 최신 멘트 저장
   private lastScore: string = '0:0'; // 이전 스코어 저장
   private lastSuccessfulData: GameData | null = null; // 마지막으로 성공적으로 업데이트된 데이터 저장
@@ -376,6 +377,15 @@ class BackgroundLiveActivityService {
               console.log(`🔍 계산 로직: ${currentHalfForAtBat === 'top' ? '초이닝(원정팀공격)' : '말이닝(홈팀공격)'}`);
               console.log(`🔍 투수: ${currentAtBat.pitcher?.player_name}, 타자: ${currentAtBat.actual_batter?.player_name}`);
               
+              // 현재 스코어 추출
+              const currentScore = currentAtBat.score || '0:0';
+              
+              // 스코어 변화 감지 및 이전 스코어 업데이트
+              if (currentScore !== this.previousScore) {
+                console.log('🔍 [스코어 변화] 이전:', this.previousScore, '현재:', currentScore);
+                this.previousScore = currentScore;
+              }
+              
               // 현재 투타 정보를 기반으로 상황 생성
               const situation = {
                 playerName: currentAtBat.actual_batter?.player_name || '타자',
@@ -390,6 +400,9 @@ class BackgroundLiveActivityService {
                 onBase: currentAtBat.on_base || { base1: '0', base2: '0', base3: '0' },
                 mainResult: currentAtBat.main_result || '',
                 fullResult: currentAtBat.full_result || '',
+                strikes: parseInt(currentAtBat.strikes || '0'),
+                balls: parseInt(currentAtBat.balls || '0'),
+                previousScore: this.previousScore, // 이전 스코어 전달
                 isOngoing: true
               };
               
@@ -398,7 +411,7 @@ class BackgroundLiveActivityService {
               gameMessage = comment;
               console.log('🔍 Generated current at-bat comment:', comment);
             } else {
-              // 진행 중인 타석이 없으면 현재 투타 정보만 표시
+              // 진행 중인 타석이 없으면 현재 투타 정보만 표시 (이전 멘트는 지움)
               const attackingTeamName = currentHalf === 'top' ? awayTeamName : homeTeamName;
               gameMessage = `${currentInning}회 ${currentHalf === 'top' ? '초' : '말'} ${attackingTeamName}의 공격\n${currentBatter} vs ${currentPitcher}`;
               console.log('🔍 No ongoing at-bat, showing current pitcher vs batter info:', gameMessage);

@@ -58,6 +58,7 @@ const LiveTextBroadcast = ({
   const [archivedReady, setArchivedReady] = useState<boolean>(true);
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('');
   const [cachedData, setCachedData] = useState<{[key: number]: {top: any[], bot: any[]}}>({});
+  const [previousScore, setPreviousScore] = useState<string>('0:0'); // 이전 스코어 추적
 
   const scrollRef = useRef<ScrollView>(null);
   const currentOffsetRef = useRef<number>(0);
@@ -75,6 +76,17 @@ const LiveTextBroadcast = ({
     console.log('🎤 멘트 생성 시작 - 이닝:', selectedInning);
     console.log('🎤 [디버깅] rawTopAtBats 길이:', rawTopAtBats.length);
     console.log('🎤 [디버깅] rawBotAtBats 길이:', rawBotAtBats.length);
+    
+    // 현재 스코어 추출 (가장 최근 타석에서)
+    const allAtBats = [...rawTopAtBats, ...rawBotAtBats];
+    const latestAtBat = allAtBats[allAtBats.length - 1];
+    const currentScore = latestAtBat?.score || '0:0';
+    
+    // 스코어 변화 감지 및 이전 스코어 업데이트
+    if (currentScore !== previousScore) {
+      console.log('🎤 [스코어 변화] 이전:', previousScore, '현재:', currentScore);
+      setPreviousScore(currentScore);
+    }
     
     // 현재 진행 중인 타석 찾기
     let currentAtBat = null;
@@ -121,6 +133,9 @@ const LiveTextBroadcast = ({
         onBase: currentAtBat.on_base || { base1: '0', base2: '0', base3: '0' },
         mainResult: currentAtBat.main_result || '',
         fullResult: currentAtBat.full_result || '',
+        strikes: parseInt(currentAtBat.strikes || '0'),
+        balls: parseInt(currentAtBat.balls || '0'),
+        previousScore: previousScore, // 이전 스코어 전달
         // 현재 진행 중인 타석이므로 특별한 상황으로 처리
         isOngoing: true
       };
@@ -139,50 +154,18 @@ const LiveTextBroadcast = ({
         onCommentGenerated(comment);
       }
     } else {
-      // 진행 중인 타석이 없으면 최근 완료된 타석들에서 멘트 생성
-      const recentAtBats = [
-        ...rawBotAtBats.slice(-1), // 말 이닝 최근 1개
-        ...rawTopAtBats.slice(-1)  // 초 이닝 최근 1개
-      ];
-
-      console.log('🎤 [디버깅] 진행 중인 타석 없음, 최근 완료된 타석들로 멘트 생성:', recentAtBats.length);
-
-      recentAtBats.forEach((atBat, index) => {
-        console.log(`🎤 [디버깅] atBat ${index}:`, atBat);
-        
-        if (!atBat) {
-          console.log(`🎤 [디버깅] atBat ${index} is null/undefined`);
-          return;
-        }
-
-        const isTop = index >= 1; // 처음 1개는 말 이닝, 나머지는 초 이닝
-        const teamId = isTop ? awayTeam : homeTeam;
-        const teamName = teamNameMap[teamId] || teamId;
-        const half = isTop ? 'top' : 'bot';
-        
-        console.log(`🎤 [디버깅] 처리 중 - isTop: ${isTop}, teamName: ${teamName}, half: ${half}`);
-        
-        const situation = extractSituationFromAtBat(atBat, teamName, homeTeamName, awayTeamName, selectedInning, half);
-        console.log(`🎤 [디버깅] extracted situation:`, situation);
-        
-        if (situation) {
-          // event 필드 추출 (배열이면 첫 번째 요소 사용)
-          const eventText = Array.isArray(atBat.event) ? atBat.event[0] : atBat.event;
-          const comment = generateGameComment(situation, eventText);
-          console.log(`🎤 [${isTop ? '초' : '말'} 이닝] ${situation.playerName}: ${comment}`);
-          console.log(`🎤 [디버깅] main_result: ${atBat.main_result}, full_result: ${atBat.full_result}, event: ${eventText}`);
-          
-          // 가장 최근 멘트 저장
-          latestComment = comment;
-          
-          // 라이브 액티비티에 전달할 수 있도록 콜백 호출
-          if (onCommentGenerated) {
-            onCommentGenerated(comment);
-          }
-        } else {
-          console.log(`🎤 [디버깅] situation이 null입니다. atBat:`, atBat);
-        }
-      });
+      // 진행 중인 타석이 없으면 이전 멘트를 지우고 현재 투타 정보만 표시
+      console.log('🎤 [디버깅] 진행 중인 타석 없음, 이전 멘트 지우고 현재 투타 정보만 표시');
+      
+      // 현재 투타 정보만 표시 (이전 멘트는 지움)
+      const currentTeamName = currentHalf === 'top' ? awayTeamName : homeTeamName;
+      const currentHalfText = currentHalf === 'top' ? '초' : '말';
+      latestComment = `${selectedInning}회 ${currentHalfText} ${currentTeamName}의 공격`;
+      
+      // 라이브 액티비티에 전달할 수 있도록 콜백 호출
+      if (onCommentGenerated) {
+        onCommentGenerated(latestComment);
+      }
     }
 
     console.log(`🎤 [디버깅] 최종 latestComment:`, latestComment);

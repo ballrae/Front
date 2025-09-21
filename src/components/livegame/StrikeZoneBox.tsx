@@ -112,12 +112,13 @@ const StrikeZoneBox = ({
         const px = mapX(pitch.x);
         const py = mapY(pitch.y);
 
-        // 스트존 박스 기준 내부 공만 렌더링
+        // 스트존 박스 기준 내부 + 근처 공들도 렌더링 (볼을 더 잘 보이게)
+        const margin = 30; // 스트라이크존 밖으로 30px까지 확장
         const isInsideZone =
-          px >= ZONE_LEFT &&
-          px <= ZONE_LEFT + ZONE_WIDTH &&
-          py >= ZONE_TOP &&
-          py <= ZONE_TOP + ZONE_HEIGHT;
+          px >= ZONE_LEFT - margin &&
+          px <= ZONE_LEFT + ZONE_WIDTH + margin &&
+          py >= ZONE_TOP - margin &&
+          py <= ZONE_TOP + ZONE_HEIGHT + margin;
 
         if (!isInsideZone) return null;
 

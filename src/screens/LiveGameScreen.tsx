@@ -86,8 +86,12 @@ const LiveGameScreen = React.memo(() => {
 
   // 응원가 재생 함수
   const playCheerSongForPlayer = useCallback((playerId: string) => {
+    console.log('🎵 [LiveGameScreen] playCheerSongForPlayer 호출 - playerId:', playerId, 'cheerSongEnabled:', cheerSongEnabled);
+    
     if (cheerSongEnabled && playerId) {
       playCheerSong(playerId);
+    } else {
+      console.log('🎵 [LiveGameScreen] 응원가 재생 조건 미충족 - cheerSongEnabled:', cheerSongEnabled, 'playerId:', playerId);
     }
   }, [cheerSongEnabled]);
 
@@ -156,10 +160,12 @@ const LiveGameScreen = React.memo(() => {
 
   // 타자 정보가 변경될 때 응원가 재생
   useEffect(() => {
+    console.log('🎵 [LiveGameScreen] useEffect - actualBatterId:', actualBatterId, 'cheerSongEnabled:', cheerSongEnabled);
+    
     if (actualBatterId && cheerSongEnabled) {
       playCheerSongForPlayer(actualBatterId);
     }
-  }, [actualBatterId, cheerSongEnabled]);
+  }, [actualBatterId, cheerSongEnabled, playCheerSongForPlayer]);
 
 
   // 화면 진입 시 라이브 액티비티 시작 (마이팀 경기만)

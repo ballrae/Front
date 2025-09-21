@@ -17,6 +17,9 @@ interface GameSituation {
     base2: string;
     base3: string;
   };
+  strikes: number;
+  balls: number;
+  previousScore?: string; // 이전 스코어 추가
 }
 
 // 멘트 템플릿들
@@ -179,6 +182,14 @@ const COMMENT_TEMPLATES = {
     "삼진으로 이닝 선두타자를 잡아내며 기분 좋게 출발하는 {PITCHER_NAME}."
   ],
 
+  // 풀카운트 삼진
+  FULL_COUNT_STRIKEOUT: [
+    "3-2 풀카운트! {PITCHER_NAME}의 마지막 공이 스트라이크존을 정확히 통과하며 삼진!",
+    "긴장감 넘치는 풀카운트 승부! {PITCHER_NAME}{PITCHER_JOSA_IGA} {PLAYER_NAME}{PLAYER_JOSA_EULREUL} 삼진으로 돌려세웁니다!",
+    "3볼 2스트라이크! {PITCHER_NAME}의 결정구가 타자의 배트를 비켜가며 삼진!",
+    "풀카운트의 압박! {PITCHER_NAME}{PITCHER_JOSA_IGA} 마지막 순간에 완벽한 공을 던져 삼진을 잡아냅니다!"
+  ],
+
   // 볼넷
   WALK: [
     "{PITCHER_NAME}의 제구가 흔들렸습니다!\n{PLAYER_NAME}{PLAYER_JOSA_IGA} 볼넷으로 출루합니다.",
@@ -325,6 +336,11 @@ function analyzeResult(mainResult: string, fullResult: string, event?: string, s
   
   // 삼진 관련 분석
   if (allText.includes('삼진')) {
+    // 풀카운트 삼진 체크
+    if (situation && situation.strikes === 2 && situation.balls === 3) {
+      return 'FULL_COUNT_STRIKEOUT';
+    }
+    
     if (situation && isBasesLoaded(situation.onBase)) {
       return 'BASES_LOADED_STRIKEOUT';
     }
@@ -438,16 +454,72 @@ function isScoringPosition(onBase: any): boolean {
   return onBase && (onBase.base2 !== '0' || onBase.base3 !== '0');
 }
 
-// 역전 상황 체크 (스코어 변화 분석 필요)
+// 역전 상황 체크 (스코어 변화 분석)
 function isComeback(situation: GameSituation): boolean {
-  // 실제로는 이전 스코어와 비교해야 하지만, 여기서는 간단히 처리
-  return false; // 실제 구현에서는 스코어 변화 로직 필요
+  if (!situation.previousScore || !situation.score) {
+    return false;
+  }
+  
+  try {
+    // 이전 스코어 파싱
+    const [prevAway, prevHome] = situation.previousScore.split(':').map(Number);
+    // 현재 스코어 파싱
+    const [currAway, currHome] = situation.score.split(':').map(Number);
+    
+    // 현재 공격 팀이 홈팀인지 원정팀인지 확인
+    const isHomeTeam = situation.half === 'bot';
+    
+    if (isHomeTeam) {
+      // 홈팀 공격 시: 홈팀 점수가 증가했고, 이제 홈팀이 리드하고 있으면 역전
+      const homeScoreIncreased = currHome > prevHome;
+      const homeNowLeading = currHome > currAway;
+      const wasBehind = prevHome <= prevAway;
+      return homeScoreIncreased && homeNowLeading && wasBehind;
+    } else {
+      // 원정팀 공격 시: 원정팀 점수가 증가했고, 이제 원정팀이 리드하고 있으면 역전
+      const awayScoreIncreased = currAway > prevAway;
+      const awayNowLeading = currAway > currHome;
+      const wasBehind = prevAway <= prevHome;
+      return awayScoreIncreased && awayNowLeading && wasBehind;
+    }
+  } catch (error) {
+    console.error('스코어 파싱 에러:', error);
+    return false;
+  }
 }
 
 // 동점 상황 체크
 function isTie(situation: GameSituation): boolean {
-  // 실제로는 이전 스코어와 비교해야 하지만, 여기서는 간단히 처리
-  return false; // 실제 구현에서는 스코어 변화 로직 필요
+  if (!situation.previousScore || !situation.score) {
+    return false;
+  }
+  
+  try {
+    // 이전 스코어 파싱
+    const [prevAway, prevHome] = situation.previousScore.split(':').map(Number);
+    // 현재 스코어 파싱
+    const [currAway, currHome] = situation.score.split(':').map(Number);
+    
+    // 현재 공격 팀이 홈팀인지 원정팀인지 확인
+    const isHomeTeam = situation.half === 'bot';
+    
+    if (isHomeTeam) {
+      // 홈팀 공격 시: 홈팀 점수가 증가했고, 이제 동점이면 동점타
+      const homeScoreIncreased = currHome > prevHome;
+      const isNowTied = currHome === currAway;
+      const wasBehind = prevHome < prevAway;
+      return homeScoreIncreased && isNowTied && wasBehind;
+    } else {
+      // 원정팀 공격 시: 원정팀 점수가 증가했고, 이제 동점이면 동점타
+      const awayScoreIncreased = currAway > prevAway;
+      const isNowTied = currAway === currHome;
+      const wasBehind = prevAway < prevHome;
+      return awayScoreIncreased && isNowTied && wasBehind;
+    }
+  } catch (error) {
+    console.error('스코어 파싱 에러:', error);
+    return false;
+  }
 }
 
 // 결승타 상황 체크
@@ -580,6 +652,8 @@ export function generateGameComment(situation: GameSituation, event?: string): s
     .replace(/{OUTS}/g, getOutsText(situation.outs))
     .replace(/{SCORE}/g, situation.score)
     .replace(/{PITCHER_NAME}/g, situation.pitcherName)
+    .replace(/{STRIKES}/g, situation.strikes.toString())
+    .replace(/{BALLS}/g, situation.balls.toString())
     // 조사 치환
     .replace(/{PLAYER_JOSA_IGA}/g, getJosa(situation.playerName, '이/가'))
     .replace(/{PLAYER_JOSA_EULREUL}/g, getJosa(situation.playerName, '을/를'))
@@ -619,7 +693,7 @@ export function generateGameComment(situation: GameSituation, event?: string): s
 }
 
 // 최근 타석 결과에서 상황 정보 추출
-export function extractSituationFromAtBat(atBat: any, teamName: string, homeTeamName: string, awayTeamName: string, inning: number, half: 'top' | 'bot'): GameSituation | null {
+export function extractSituationFromAtBat(atBat: any, teamName: string, homeTeamName: string, awayTeamName: string, inning: number, half: 'top' | 'bot', previousScore?: string): GameSituation | null {
   console.log('🎤 [extractSituationFromAtBat] 시작 - atBat:', atBat);
   
   if (!atBat) {
@@ -659,7 +733,10 @@ export function extractSituationFromAtBat(atBat: any, teamName: string, homeTeam
     outs: parseInt(atBat.out || '0'),
     score: atBat.score || '0:0',
     pitcherName,
-    onBase: atBat.on_base || { base1: '0', base2: '0', base3: '0' }
+    onBase: atBat.on_base || { base1: '0', base2: '0', base3: '0' },
+    strikes: parseInt(atBat.strikes || '0'),
+    balls: parseInt(atBat.balls || '0'),
+    previousScore: previousScore
   };
   
   console.log('🎤 [extractSituationFromAtBat] 생성된 situation:', situation);
