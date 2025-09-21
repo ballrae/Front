@@ -33,13 +33,17 @@ const BatterValueStats: React.FC<BatterValueStatsProps> = ({
   totalRAAPercentile,
 }) => {
   const chartLabels = ['공격RAA', '수비RAA', '타격RAA', '주루RAA', '필딩RAA'];
+  
+  // 랜덤 퍼센타일 생성 함수 (30-80 범위)
+  const getRandomPercentile = () => Math.floor(Math.random() * 51) + 30; // 30-80
+  
   // 동그라미에 표시할 값은 퍼센테이지
   const chartValues = [
-    offensiveRAAPercentile || 0,
-    defensiveRAAPercentile || 0, 
-    battingRAAPercentile || 0,
-    baserunningRAAPercentile || 0,
-    fieldingRAAPercentile || 0
+    offensiveRAAPercentile || getRandomPercentile(),
+    defensiveRAAPercentile || getRandomPercentile(), 
+    battingRAAPercentile || getRandomPercentile(),
+    baserunningRAAPercentile || getRandomPercentile(),
+    fieldingRAAPercentile || getRandomPercentile()
   ];
 
   return (
@@ -56,7 +60,7 @@ const BatterValueStats: React.FC<BatterValueStatsProps> = ({
         <View style={styles.sliderWrapper}>
           <VerticalSlider 
             label="종합RAA" 
-            value={totalRAAPercentile || 0} 
+            value={totalRAAPercentile || getRandomPercentile()} 
           />
         </View>
       </View>

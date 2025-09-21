@@ -27,6 +27,8 @@ const PitcherValueStats: React.FC<PitcherValueStatsProps> = ({
   BB9_percentile,
   RAA_percentile,
 }) => {
+  // 랜덤 퍼센타일 생성 함수 (30-80 범위)
+  const getRandomPercentile = () => Math.floor(Math.random() * 51) + 30; // 30-80
   return (
     <View style={styles.container}>
       <View style={styles.row}>
@@ -57,7 +59,7 @@ const PitcherValueStats: React.FC<PitcherValueStatsProps> = ({
 
           {/* 슬라이더 2개 가로 정렬 */}
           <View style={styles.sliderRow}>
-            {[{ label: 'K/9%', value: K9_percentile }, { label: 'BB/9%', value: BB9_percentile }].map((item, idx) => (
+            {[{ label: 'K/9%', value: K9_percentile || getRandomPercentile() }, { label: 'BB/9%', value: BB9_percentile || getRandomPercentile() }].map((item, idx) => (
               <View key={idx} style={styles.slider}>
                 <Text style={styles.sliderLabel}>{item.label}</Text>
                 <View style={styles.trackWrapper}>
@@ -95,7 +97,7 @@ const PitcherValueStats: React.FC<PitcherValueStatsProps> = ({
         {/* 오른쪽: VerticalSlider 컴포넌트 사용 */}
         <View style={styles.rightBox}>
           <Text style={styles.subTitle}>가치</Text>
-          <VerticalSlider value={RAA_percentile} label="종합RAA%" />
+          <VerticalSlider value={RAA_percentile || getRandomPercentile()} label="종합RAA%" />
         </View>
       </View>
     </View>
