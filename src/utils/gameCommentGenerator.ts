@@ -3,6 +3,8 @@
 interface GameSituation {
   playerName: string;
   teamName: string;
+  homeTeamName: string;
+  awayTeamName: string;
   inning: number;
   half: 'top' | 'bot';
   mainResult: string;
@@ -572,6 +574,8 @@ export function generateGameComment(situation: GameSituation, event?: string): s
   let comment = template
     .replace(/{PLAYER_NAME}/g, situation.playerName)
     .replace(/{TEAM_NAME}/g, situation.teamName)
+    .replace(/{HOME_TEAM_NAME}/g, situation.homeTeamName)
+    .replace(/{AWAY_TEAM_NAME}/g, situation.awayTeamName)
     .replace(/{INNING}/g, getInningText(situation.inning, situation.half))
     .replace(/{OUTS}/g, getOutsText(situation.outs))
     .replace(/{SCORE}/g, situation.score)
@@ -581,7 +585,9 @@ export function generateGameComment(situation: GameSituation, event?: string): s
     .replace(/{PLAYER_JOSA_EULREUL}/g, getJosa(situation.playerName, '을/를'))
     .replace(/{PITCHER_JOSA_IGA}/g, getJosa(situation.pitcherName, '이/가'))
     .replace(/{PITCHER_JOSA_EULREUL}/g, getJosa(situation.pitcherName, '을/를'))
-    .replace(/{TEAM_JOSA_EULREUL}/g, getJosa(situation.teamName, '을/를'));
+    .replace(/{TEAM_JOSA_EULREUL}/g, getJosa(situation.teamName, '을/를'))
+    .replace(/{HOME_TEAM_JOSA_EULREUL}/g, getJosa(situation.homeTeamName, '을/를'))
+    .replace(/{AWAY_TEAM_JOSA_EULREUL}/g, getJosa(situation.awayTeamName, '을/를'));
   
   // 홈런 타입
   if (resultType === 'HOMERUN') {
@@ -613,7 +619,7 @@ export function generateGameComment(situation: GameSituation, event?: string): s
 }
 
 // 최근 타석 결과에서 상황 정보 추출
-export function extractSituationFromAtBat(atBat: any, teamName: string, inning: number, half: 'top' | 'bot'): GameSituation | null {
+export function extractSituationFromAtBat(atBat: any, teamName: string, homeTeamName: string, awayTeamName: string, inning: number, half: 'top' | 'bot'): GameSituation | null {
   console.log('🎤 [extractSituationFromAtBat] 시작 - atBat:', atBat);
   
   if (!atBat) {
@@ -644,6 +650,8 @@ export function extractSituationFromAtBat(atBat: any, teamName: string, inning: 
   const situation = {
     playerName,
     teamName,
+    homeTeamName,
+    awayTeamName,
     inning,
     half,
     mainResult: atBat.main_result || '',

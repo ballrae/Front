@@ -22,6 +22,8 @@ type LiveTextBroadcastProps = {
   setSelectedInning: React.Dispatch<React.SetStateAction<number>>;
   homeTeam: string;
   awayTeam: string;
+  homeTeamName: string;
+  awayTeamName: string;
   maxInning: number;
   setPitcherId?: (id: number) => void;
   setBatterId?: (id: number) => void;
@@ -37,6 +39,8 @@ const LiveTextBroadcast = ({
   setSelectedInning,
   homeTeam,
   awayTeam,
+  homeTeamName,
+  awayTeamName,
   maxInning: maxInningProp,
   setPitcherId,
   setBatterId,
@@ -97,7 +101,8 @@ const LiveTextBroadcast = ({
 
     // 현재 진행 중인 타석이 있으면 해당 타석으로 멘트 생성
     if (currentAtBat && currentHalf) {
-      const teamName = currentHalf === 'top' ? awayTeam : homeTeam;
+      const teamId = currentHalf === 'top' ? awayTeam : homeTeam;
+      const teamName = teamNameMap[teamId] || teamId;
       
       console.log(`🎤 [디버깅] 현재 투타 정보 - 팀: ${teamName}, 하프: ${currentHalf}`);
       console.log(`🎤 [디버깅] 투수: ${currentAtBat.pitcher?.player_name}, 타자: ${currentAtBat.actual_batter?.player_name}`);
@@ -106,6 +111,8 @@ const LiveTextBroadcast = ({
       const situation = {
         playerName: currentAtBat.actual_batter?.player_name || '타자',
         teamName: teamName,
+        homeTeamName: homeTeamName,
+        awayTeamName: awayTeamName,
         pitcherName: currentAtBat.pitcher?.player_name || '투수',
         inning: selectedInning,
         half: currentHalf,
@@ -149,12 +156,13 @@ const LiveTextBroadcast = ({
         }
 
         const isTop = index >= 1; // 처음 1개는 말 이닝, 나머지는 초 이닝
-        const teamName = isTop ? awayTeam : homeTeam;
+        const teamId = isTop ? awayTeam : homeTeam;
+        const teamName = teamNameMap[teamId] || teamId;
         const half = isTop ? 'top' : 'bot';
         
         console.log(`🎤 [디버깅] 처리 중 - isTop: ${isTop}, teamName: ${teamName}, half: ${half}`);
         
-        const situation = extractSituationFromAtBat(atBat, teamName, selectedInning, half);
+        const situation = extractSituationFromAtBat(atBat, teamName, homeTeamName, awayTeamName, selectedInning, half);
         console.log(`🎤 [디버깅] extracted situation:`, situation);
         
         if (situation) {

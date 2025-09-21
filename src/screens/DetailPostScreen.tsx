@@ -51,10 +51,36 @@ const formatDate = (iso: string) => {
 // 욕설 필터링 API 함수
 const filterText = async (text: string): Promise<string> => {
   try {
-    const res = await axios.post('http://3.15.209.24:8001/filter', { text });
-    return res.data.masked_text || text;
-  } catch (err) {
-    console.error('욕설 필터링 실패:', err);
+    console.log('🔍 욕설 필터링 요청 시작:', text);
+    console.log('🔍 요청 URL:', 'http://3.15.209.24:8001/filter');
+    
+    const res = await axios.post('http://3.15.209.24:8001/filter', 
+      { text },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000, // 10초로 늘림
+      }
+    );
+    
+    console.log('🔍 응답 상태:', res.status);
+    console.log('🔍 응답 헤더:', res.headers);
+    console.log('🔍 응답 데이터:', res.data);
+    
+    const filteredText = res.data.masked_text || text;
+    console.log('🔍 최종 필터링된 텍스트:', filteredText);
+    return filteredText;
+  } catch (err: any) {
+    console.error('🚨 욕설 필터링 실패!');
+    console.error('🚨 에러 타입:', typeof err);
+    console.error('🚨 에러 메시지:', err.message);
+    console.error('🚨 에러 코드:', err.code);
+    console.error('🚨 응답 상태:', err.response?.status);
+    console.error('🚨 응답 데이터:', err.response?.data);
+    console.error('🚨 전체 에러:', err);
+    
+    // 필터링 실패 시 원본 텍스트를 그대로 반환
     return text;
   }
 };
@@ -69,6 +95,8 @@ const DetailPostScreen = () => {
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [filteredContent, setFilteredContent] = useState<string>('');
+  const [filteredComments, setFilteredComments] = useState<CommentItem[]>([]);
 
   const fetchPostAndComments = async () => {
     console.time('🟡 fetchPostAndComments 전체');
@@ -93,6 +121,19 @@ const DetailPostScreen = () => {
 
       setPost(postData);
       setComments(commentsRes.data.data);
+      
+      // 게시글 내용 필터링
+      const filteredPostContent = await filterText(postData.content);
+      setFilteredContent(filteredPostContent);
+      
+      // 댓글 내용들 필터링
+      const filteredCommentsData = await Promise.all(
+        commentsRes.data.data.map(async (comment: CommentItem) => ({
+          ...comment,
+          comment_content: await filterText(comment.comment_content)
+        }))
+      );
+      setFilteredComments(filteredCommentsData);
     } catch (err: any) {
       if (err.response?.status === 401) {
         Alert.alert('알림', '로그인 후 이용해주세요!', [
@@ -132,14 +173,29 @@ const DetailPostScreen = () => {
   const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
     try {
+      console.log('📝 댓글 작성 시작:', commentText);
       const filteredComment = await filterText(commentText); // 욕설 필터링 API 호출
+      console.log('📝 필터링된 댓글:', filteredComment);
+      
       await axiosInstance.post(`/api/posts/${teamId}/${postId}/comments/`, {
         comment_content: filteredComment,
       });
       setCommentText('');
+      
       const res = await axiosInstance.get(`/api/posts/${teamId}/${postId}/comments/`);
       setComments(res.data.data);
-    } catch {
+      
+      // 새로 추가된 댓글들도 필터링
+      const filteredCommentsData = await Promise.all(
+        res.data.data.map(async (comment: CommentItem) => ({
+          ...comment,
+          comment_content: await filterText(comment.comment_content)
+        }))
+      );
+      setFilteredComments(filteredCommentsData);
+      console.log('📝 최종 필터링된 댓글 목록:', filteredCommentsData);
+    } catch (err: any) {
+      console.error('댓글 작성 에러:', err);
       Alert.alert('댓글 등록 실패', '잠시 후 다시 시도해주세요.');
     }
   };
@@ -174,7 +230,7 @@ const DetailPostScreen = () => {
             {post.imageUri && (
               <Image source={{ uri: post.imageUri }} style={styles.postImage} />
             )}
-            <Text style={styles.content}>{post.content}</Text>
+            <Text style={styles.content}>{filteredContent || post.content}</Text>
 
             <View style={styles.reactionBar}>
               <TouchableOpacity style={styles.reactionItem} onPress={toggleLike}>
@@ -189,7 +245,7 @@ const DetailPostScreen = () => {
             </View>
 
             <View style={styles.commentSection}>
-              {comments.map((comment) => (
+              {(filteredComments.length > 0 ? filteredComments : comments).map((comment) => (
                 <View key={comment.id} style={styles.commentRow}>
                   <Image source={teamLogoMap[comment.userTeamId]} style={styles.commentProfileImage} />
                   <View style={styles.commentTextColumn}>

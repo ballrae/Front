@@ -8,7 +8,6 @@ import PlayerHeader from '../components/archive/PlayerHeader';
 import BatterBasicStats from '../components/archive/batter/BatterBasicStats';
 import BatterAdvancedStats from '../components/archive/batter/BatterAdvancedStats';
 import BatterValueStats from '../components/archive/batter/BatterValueStats';
-import GroundHeatMap from '../components/archive/batter/GroundHeatMap';
 
 import teamNameMap from '../constants/teamNames';
 import teamSymbolMap from '../constants/teamSymbols';
@@ -148,8 +147,6 @@ useEffect(() => {
         position={batter.position}
         image={batter.image}
       />
-      <GroundHeatMap />
-
       <BatterBasicStats
         G={batter.G}
         AVG={batter.AVG}

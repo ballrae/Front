@@ -144,12 +144,6 @@ const MyPageScreen = () => {
           <TouchableOpacity style={styles.item} onPress={() => navigation.navigate('MyTeamScreen')}>
             <Text style={styles.menuText}>마이팀 설정</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.item} onPress={() => goToSetting('broadcast')}>
-            <Text style={styles.menuText}>중계실 설정</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.item} onPress={() => goToSetting('alarm')}>
-            <Text style={styles.menuText}>알림 설정</Text>
-          </TouchableOpacity>
           <TouchableOpacity style={[styles.item, styles.noBorder]} onPress={handleLogout}>
             <Text style={[styles.menuText, styles.logout]}>로그아웃</Text>
           </TouchableOpacity>

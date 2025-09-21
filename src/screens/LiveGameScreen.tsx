@@ -775,6 +775,8 @@ const LiveGameScreen = React.memo(() => {
             setSelectedInning={setSelectedInning}
             homeTeam={homeTeam}
             awayTeam={awayTeam}
+            homeTeamName={homeTeamName}
+            awayTeamName={awayTeamName}
             maxInning={maxInning}
             isGameDone={status === 'DONE'}
             cheerSongEnabled={cheerSongEnabled}

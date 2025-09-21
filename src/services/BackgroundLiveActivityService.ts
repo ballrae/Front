@@ -380,6 +380,8 @@ class BackgroundLiveActivityService {
               const situation = {
                 playerName: currentAtBat.actual_batter?.player_name || '타자',
                 teamName: attackingTeamName,
+                homeTeamName: homeTeamName,
+                awayTeamName: awayTeamName,
                 pitcherName: currentAtBat.pitcher?.player_name || '투수',
                 inning: currentInning,
                 half: currentHalfForAtBat,
