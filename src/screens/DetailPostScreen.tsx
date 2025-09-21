@@ -51,7 +51,7 @@ const formatDate = (iso: string) => {
 // 욕설 필터링 API 함수
 const filterText = async (text: string): Promise<string> => {
   try {
-    const res = await axios.post('http://3.16.129.16:8001/filter', { text });
+    const res = await axios.post('http://3.15.209.24:8001/filter', { text });
     return res.data.masked_text || text;
   } catch (err) {
     console.error('욕설 필터링 실패:', err);

@@ -35,7 +35,7 @@ const WritePostScreen = () => {
 
   const filterText = async (text: string): Promise<string> => {
     try {
-      const res = await axios.post('http://3.16.129.16:8001/filter', {
+      const res = await axios.post('http://3.15.209.24:8001/filter', {
         text,
       });
       return res.data.masked_text || text;
